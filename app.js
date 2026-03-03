@@ -2612,6 +2612,11 @@ async function loadGrocery(silent = false) {
           api('PATCH', 'grocery_items', `id=eq.${item.id}`, { category: item.category }).catch(() => {});
         }
       });
+      html += `<div style="position:relative;margin-bottom:14px">
+        <input id="grocery-search" type="text" placeholder="Search items…" oninput="filterGroceryItems(this.value)"
+          style="width:100%;padding:10px 14px 10px 36px;background:var(--bg-input);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;box-sizing:border-box">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--muted)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);pointer-events:none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>`;
       if (items.length === 0) {
         html += `
           <div class="empty-state">
