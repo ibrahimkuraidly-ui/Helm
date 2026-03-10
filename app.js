@@ -1170,10 +1170,22 @@ async function loadPortfolio(silent = false) {
   const el = document.getElementById('portfolio-content');
   if (!silent) el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
   try {
-    const [accounts, snapshots] = await Promise.all([
+    const [accounts, snapshots, allHoldings] = await Promise.all([
       api('GET', 'investment_accounts',  `user_id=eq.${currentUserId}&select=*&order=created_at`),
       api('GET', 'investment_snapshots', `user_id=eq.${currentUserId}&select=*&order=date.asc`),
+      api('GET', 'crypto_holdings',      `user_id=eq.${currentUserId}&select=*`).catch(() => []),
     ]);
+
+    // Build holdings map
+    const holdingsByAcct = {};
+    allHoldings.forEach(h => {
+      if (!holdingsByAcct[h.account_id]) holdingsByAcct[h.account_id] = [];
+      holdingsByAcct[h.account_id].push(h);
+    });
+
+    // Auto-update Crypto snapshots (once per day) — merge new snaps before calculating
+    const newSnaps = await autoUpdateCryptoSnapshots(accounts, snapshots, holdingsByAcct);
+    newSnaps.forEach(s => snapshots.push(s));
 
     // Latest balance per account
     const latestByAcct = {};
