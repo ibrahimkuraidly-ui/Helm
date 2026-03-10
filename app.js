@@ -1465,7 +1465,7 @@ function openEditHoldings(accountId, accountName) {
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
       <div class="modal">
         <div class="modal-title">Crypto Holdings — ${accountName}</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Balance auto-updates once daily using live prices from CoinPaprika.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Balance auto-updates once daily using live prices.</div>
         <div id="holdings-rows"></div>
         <button class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:16px" onclick="addHoldingRow()">+ Add Coin</button>
         <div class="modal-actions">
