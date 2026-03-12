@@ -1124,6 +1124,20 @@ async function submitEditBudget(id) {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
+async function copyFromLastMonth(currentId, category) {
+  const lastMonth = prevMonth(_activeMonth);
+  try {
+    const rows = await api('GET', 'budgets', `user_id=eq.${currentUserId}&month=eq.${lastMonth}&category=eq.${encodeURIComponent(category)}&select=*`);
+    if (!rows.length || parseFloat(rows[0].limit_amount) === 0) {
+      showToast('No budget set for last month', 'info'); return;
+    }
+    const amount = parseFloat(rows[0].limit_amount);
+    await api('PATCH', 'budgets', `id=eq.${currentId}`, { limit_amount: amount });
+    showToast(`Copied ${fmt(amount)}`, 'success');
+    loadBudget(true);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
 // ─── Savings ─────────────────────────────────────────────────────────────────
 
 async function loadSavings(silent = false) {
