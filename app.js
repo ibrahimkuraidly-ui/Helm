@@ -819,12 +819,16 @@ async function loadTransactions(silent = false) {
 
     const totalSpent = txns.reduce((s, t) => s + parseFloat(t.amount), 0);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const [ty, tm] = _activeMonth.split('-').map(Number);
+    const tCycleStartY = tm === 1 ? ty - 1 : ty;
+    const tCycleStartM = tm === 1 ? 12 : tm - 1;
+    const tCycleStart = `${tCycleStartY}-${String(tCycleStartM).padStart(2, '0')}-25`;
+    const tCycleEnd   = `${_activeMonth}-24`;
     const activeGoal = allIncomeGoals.find(g => {
       if (!g.month.includes('_')) return false;
       const [s, e] = g.month.split('_');
-      return today >= s && today <= e;
-    }) || allIncomeGoals[0] || null;
+      return s <= tCycleEnd && e >= tCycleStart;
+    }) || null;
     const incomeGoalAmt = activeGoal ? parseFloat(activeGoal.limit_amount) : null;
     const remaining     = incomeGoalAmt != null ? incomeGoalAmt - totalSpent : null;
 
