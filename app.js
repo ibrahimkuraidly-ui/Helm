@@ -1270,6 +1270,7 @@ async function deleteGoal(id) {
 async function checkMonthRollover() {
   const lastMonth = prevMonth(currMonth());
   const key = `helm-rollover-${lastMonth}`;
+  if (lastMonth < '2026-03') return; // app started March 2026
   if (localStorage.getItem(key)) return;
 
   try {
