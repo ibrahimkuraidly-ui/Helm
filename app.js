@@ -1076,19 +1076,6 @@ async function loadBudget(silent = false) {
         </div>`;
     });
 
-    // Totals row
-    const totalSpent = BUDGET_ITEMS.reduce((s, cat) => s + (spentMap[cat] || 0), 0) + nsSpent;
-    html += `
-      <div class="card" style="margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:700;font-size:15px">Total Budgeted</span>
-          <span style="font-size:18px;font-weight:800">${privVal(fmt(totalBudgeted))}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-          <span style="font-size:12px;color:var(--muted)">Total Spent</span>
-          <span style="font-size:14px;font-weight:700;color:var(--red)">${privVal(fmt(totalSpent))}</span>
-        </div>
-      </div>`;
 
 
     el.innerHTML = html;
