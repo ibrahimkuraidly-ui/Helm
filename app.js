@@ -164,6 +164,7 @@ function showApp() {
     : (localStorage.getItem('helm-finance-tab') || 'dashboard');
   activateTab(savedTab);
   setTimeout(checkWaterReminder, 1200);
+  setTimeout(checkMonthRollover, 2500);
 }
 
 async function checkWaterReminder() {
