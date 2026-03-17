@@ -1265,6 +1265,42 @@ async function deleteGoal(id) {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
+// ─── Month Rollover ───────────────────────────────────────────────────────────
+
+async function checkMonthRollover() {
+  const lastMonth = prevMonth(currMonth());
+  const key = `helm-rollover-${lastMonth}`;
+  if (localStorage.getItem(key)) return;
+
+  try {
+    const [allIncomeGoals, transactions, goals] = await Promise.all([
+      api('GET', 'budgets',      `user_id=eq.${currentUserId}&category=eq.__income_goal__&select=*&order=created_at.desc`),
+      api('GET', 'transactions', `user_id=eq.${currentUserId}&${monthRange(lastMonth)}&type=eq.expense&category=neq.__card_payment__&select=amount`),
+      api('GET', 'savings_goals',`user_id=eq.${currentUserId}&select=*&order=created_at`),
+    ]);
+
+    if (!allIncomeGoals.length || !goals.length) { localStorage.setItem(key, '1'); return; }
+
+    const incomeGoalAmt = parseFloat(allIncomeGoals[0].limit_amount);
+    const totalSpent    = transactions.reduce((s, t) => s + parseFloat(t.amount), 0);
+    const surplus       = parseFloat((incomeGoalAmt - totalSpent).toFixed(2));
+
+    localStorage.setItem(key, '1');
+    if (surplus === 0) return;
+
+    const goal      = goals[0];
+    const newAmount = parseFloat((parseFloat(goal.current_amount || 0) + surplus).toFixed(2));
+    await api('PATCH', 'savings_goals', `id=eq.${goal.id}`, { current_amount: newAmount });
+
+    const label = monthLabel(lastMonth);
+    const sign  = surplus > 0 ? '+' : '-';
+    const type  = surplus > 0 ? 'success' : 'error';
+    showToast(`${label}: ${sign}$${Math.abs(surplus).toFixed(2)} ${surplus > 0 ? 'added to' : 'taken from'} savings`, type);
+  } catch (e) {
+    // silently skip — will retry next session
+  }
+}
+
 // ─── Investments ──────────────────────────────────────────────────────────────
 
 let _investChart = null;
