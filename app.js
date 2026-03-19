@@ -1295,6 +1295,37 @@ let _investChart = null;
 let _marketsTimer = null;
 let _goldTimer = null;
 
+function fetchGoldPrice() {
+  fetch('https://freegoldapi.com/data/latest.json')
+    .then(r => r.json())
+    .then(data => {
+      const entries = Array.isArray(data) ? data : Object.values(data);
+      entries.sort((a, b) => new Date(a.date || a.Date) - new Date(b.date || b.Date));
+      const latest = entries[entries.length - 1];
+      const prev   = entries[entries.length - 2];
+      const price  = parseFloat(latest.price || latest.Price || latest.gold || latest.XAU);
+      const priceEl  = document.getElementById('gold-price');
+      const changeEl = document.getElementById('gold-change');
+      if (priceEl && price) {
+        priceEl.textContent = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (prev && changeEl) {
+          const prevPrice = parseFloat(prev.price || prev.Price || prev.gold || prev.XAU);
+          const change = price - prevPrice;
+          const changePct = ((change / prevPrice) * 100).toFixed(2);
+          changeEl.textContent = (change >= 0 ? '▲' : '▼') + ' $' + Math.abs(change).toFixed(2) + ' (' + Math.abs(changePct) + '%)';
+          changeEl.style.color = change >= 0 ? 'var(--green)' : 'var(--red)';
+        }
+      }
+    })
+    .catch(() => {
+      const el2 = document.getElementById('gold-price');
+      if (el2) el2.textContent = 'Unavailable';
+    });
+  // Auto-refresh every 6 hours — restart timer each call so only one runs at a time
+  clearTimeout(_goldTimer);
+  _goldTimer = setTimeout(fetchGoldPrice, 6 * 60 * 60 * 1000);
+}
+
 async function loadPortfolio(silent = false) {
   hideFab();
   const el = document.getElementById('portfolio-content');
