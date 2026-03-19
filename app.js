@@ -1293,6 +1293,7 @@ async function checkMonthRollover() {
 
 let _investChart = null;
 let _marketsTimer = null;
+let _goldTimer = null;
 
 async function loadPortfolio(silent = false) {
   hideFab();
