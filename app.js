@@ -1296,7 +1296,7 @@ let _marketsTimer = null;
 let _goldTimer = null;
 
 function fetchGoldPrice() {
-  fetch('https://freegoldapi.com/data/latest.json')
+  fetch('https://freegoldapi.com/data/latest.json', { cache: 'no-store' })
     .then(r => r.json())
     .then(data => {
       const entries = Array.isArray(data) ? data : Object.values(data);
