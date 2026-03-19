@@ -1296,9 +1296,10 @@ let _marketsTimer = null;
 let _goldTimer = null;
 
 function fetchGoldPrice() {
-  fetch('https://freegoldapi.com/data/latest.json', { cache: 'no-store' })
+  fetch('https://freegoldapi.com/data/latest.json?_=' + Date.now(), { cache: 'no-store' })
     .then(r => r.json())
     .then(data => {
+      console.log('[Gold API]', JSON.stringify(data).slice(0, 300));
       const entries = Array.isArray(data) ? data : Object.values(data);
       entries.sort((a, b) => new Date(a.date || a.Date) - new Date(b.date || b.Date));
       const latest = entries[entries.length - 1];
