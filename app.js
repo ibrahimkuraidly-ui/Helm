@@ -1296,24 +1296,18 @@ let _marketsTimer = null;
 let _goldTimer = null;
 
 function fetchGoldPrice() {
-  fetch('https://freegoldapi.com/data/latest.json?_=' + Date.now(), { cache: 'no-store' })
+  fetch('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd&include_24hr_change=true', { cache: 'no-store' })
     .then(r => r.json())
     .then(data => {
-      console.log('[Gold API]', JSON.stringify(data).slice(0, 300));
-      const entries = Array.isArray(data) ? data : Object.values(data);
-      entries.sort((a, b) => new Date(a.date || a.Date) - new Date(b.date || b.Date));
-      const latest = entries[entries.length - 1];
-      const prev   = entries[entries.length - 2];
-      const price  = parseFloat(latest.price || latest.Price || latest.gold || latest.XAU);
-      const priceEl  = document.getElementById('gold-price');
-      const changeEl = document.getElementById('gold-change');
+      const price     = data['pax-gold']?.usd;
+      const changePct = data['pax-gold']?.usd_24h_change;
+      const priceEl   = document.getElementById('gold-price');
+      const changeEl  = document.getElementById('gold-change');
       if (priceEl && price) {
         priceEl.textContent = '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (prev && changeEl) {
-          const prevPrice = parseFloat(prev.price || prev.Price || prev.gold || prev.XAU);
-          const change = price - prevPrice;
-          const changePct = ((change / prevPrice) * 100).toFixed(2);
-          changeEl.textContent = (change >= 0 ? '▲' : '▼') + ' $' + Math.abs(change).toFixed(2) + ' (' + Math.abs(changePct) + '%)';
+        if (changeEl && changePct != null) {
+          const change = price * (changePct / (100 + changePct));
+          changeEl.textContent = (change >= 0 ? '▲' : '▼') + ' $' + Math.abs(change).toFixed(2) + ' (' + Math.abs(changePct).toFixed(2) + '%)';
           changeEl.style.color = change >= 0 ? 'var(--green)' : 'var(--red)';
         }
       }
