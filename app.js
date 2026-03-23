@@ -2549,11 +2549,20 @@ function levenshtein(a, b) {
   return dp[a.length][b.length];
 }
 
+function wordSortKey(name) {
+  // Normalize each word: strip trailing 'd' from words ≥5 chars (inclined→incline, declined→decline)
+  return name.split(' ')
+    .map(w => w.length >= 5 && w.endsWith('d') ? w.slice(0, -1) : w)
+    .sort().join('|');
+}
+
 function fuzzyFindKey(map, key) {
   if (map[key]) return key;
+  const keyWords = wordSortKey(key);
   const threshold = key.length <= 5 ? 1 : 2;
   for (const k of Object.keys(map)) {
-    if (levenshtein(key, k) <= threshold) return k;
+    if (wordSortKey(k) === keyWords) return k;       // same words, any order/tense
+    if (levenshtein(key, k) <= threshold) return k;  // typo
   }
   return null;
 }
