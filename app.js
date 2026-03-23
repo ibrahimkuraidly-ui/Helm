@@ -2621,14 +2621,32 @@ function addWorkoutExercise() {
   div.className = 'wk-exercise';
   div.style.cssText = 'background:var(--bg-input);border-radius:10px;padding:12px;margin-bottom:10px;';
   div.innerHTML = `
-    <div class="field" style="margin-bottom:10px">
+    <div class="field" style="margin-bottom:10px;position:relative">
       <label>Exercise Name</label>
-      <input type="text" class="wk-name" placeholder="e.g. Bench Press">
+      <input type="text" class="wk-name" placeholder="e.g. Bench Press" autocomplete="off">
     </div>
     <div class="wk-sets"></div>
     <button class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addWorkoutSet(this)">+ Add Set</button>`;
   container.appendChild(div);
   addWorkoutSet(div.querySelector('button'));
+  initExerciseAutocomplete(
+    div.querySelector('.wk-name'),
+    () => _exerciseHistory.filter(e => e.type === 'weights'),
+    ex => {
+      const weightInput = div.querySelector('.wk-weight');
+      const repsInput = div.querySelector('.wk-reps');
+      if (weightInput) weightInput.value = ex.weight || '';
+      if (repsInput) repsInput.value = ex.reps || '';
+      let hint = div.querySelector('.wk-last-hint');
+      if (!hint) {
+        hint = document.createElement('div');
+        hint.className = 'wk-last-hint';
+        hint.style.cssText = 'font-size:12px;color:var(--muted);margin:-4px 0 8px;';
+        div.querySelector('.wk-sets').before(hint);
+      }
+      hint.textContent = `Last time: ${ex.weight} lb × ${ex.reps} reps`;
+    }
+  );
 }
 
 function addWorkoutSet(btn) {
