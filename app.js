@@ -2621,8 +2621,8 @@ async function openWorkoutModal(date) {
         </div>
       </div>
     </div>`;
-  addWorkoutExercise();
   try { await fetchExerciseHistory(); } catch(e) {}
+  addWorkoutExercise();
 }
 
 function selectWorkoutType(type) {
