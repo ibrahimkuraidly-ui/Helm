@@ -12,6 +12,7 @@ let _currentApp = 'finance';
 let _privacyMode = false;
 let _workoutWeek = null;
 let _workoutDay = null;
+let _exerciseHistory = [];
 let _groceryCollapsed = {};
 let _waterCache = null;
 
