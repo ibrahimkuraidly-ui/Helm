@@ -2778,23 +2778,17 @@ function addWorkoutSet(btn) {
 function addBodyweightExercise() {
   const container = document.getElementById('wk-bw-exercises');
   const div = document.createElement('div');
-  div.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:8px;margin-bottom:8px;align-items:end;';
+  div.className = 'wk-bw-row';
   div.innerHTML = `
-    <div class="field" style="margin:0;position:relative"><label>Exercise</label><input type="text" class="wk-bw-name" placeholder="e.g. Pull-ups, Plank" autocomplete="off"></div>
-    <div class="field" style="margin:0"><label>Amount</label><input type="number" class="wk-bw-amount" placeholder="10" min="1" style="width:70px"></div>
-    <div class="field" style="margin:0"><label>Unit</label><select class="wk-bw-unit" style="width:72px"><option value="reps">Reps</option><option value="sec">Sec</option><option value="min">Min</option></select></div>
-    <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:22px;padding-bottom:10px" onclick="this.parentElement.remove()">×</button>`;
+    <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:6px;align-items:flex-end;margin-bottom:4px">
+      <div class="field" style="margin:0"><label>Exercise</label><input type="text" class="wk-bw-name" placeholder="Type a name…" autocomplete="off"></div>
+      <button class="wk-list-btn" onclick="wkToggleList(this,'bw')">☰</button>
+      <div class="field" style="margin:0"><label>Amount</label><input type="number" class="wk-bw-amount" placeholder="10" min="1" style="width:62px"></div>
+      <div class="field" style="margin:0"><label>Unit</label><select class="wk-bw-unit" style="width:66px"><option value="reps">Reps</option><option value="sec">Sec</option><option value="min">Min</option></select></div>
+      <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:22px;padding-bottom:10px" onclick="this.closest('.wk-bw-row').remove()">×</button>
+    </div>
+    <div class="wk-picklist" style="display:none"></div>`;
   container.appendChild(div);
-  initExerciseAutocomplete(
-    div.querySelector('.wk-bw-name'),
-    () => _exerciseHistory.filter(e => e.type === 'bw'),
-    ex => {
-      const amountInput = div.querySelector('.wk-bw-amount');
-      const unitSelect = div.querySelector('.wk-bw-unit');
-      if (amountInput) amountInput.value = ex.amount || '';
-      if (unitSelect && ex.unit) unitSelect.value = ex.unit;
-    }
-  );
 }
 
 async function saveWorkout() {
