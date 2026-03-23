@@ -2534,7 +2534,7 @@ async function fetchExerciseHistory() {
   since.setDate(since.getDate() - 180);
   const sinceStr = since.toLocaleDateString('en-CA');
   const rows = await api('GET', 'workouts', `user_id=eq.${currentUserId}&date=gte.${sinceStr}&order=date.desc&select=exercises`);
-  const weightsMap = {}, bwMap = {};
+  const weightsMap = {}, bwMap = {}, cardioMap = {};
   rows.forEach(row => {
     const ex = row.exercises;
     if (ex.type === 'weights' && ex.exercises) {
@@ -2548,9 +2548,11 @@ async function fetchExerciseHistory() {
       ex.exercises.forEach(e => {
         if (!bwMap[e.name]) bwMap[e.name] = { name: e.name, type: 'bw', amount: e.amount, unit: e.unit };
       });
+    } else if (ex.type === 'cardio' && ex.activity) {
+      if (!cardioMap[ex.activity]) cardioMap[ex.activity] = { name: ex.activity, type: 'cardio' };
     }
   });
-  _exerciseHistory = [...Object.values(weightsMap), ...Object.values(bwMap)];
+  _exerciseHistory = [...Object.values(weightsMap), ...Object.values(bwMap), ...Object.values(cardioMap)];
 }
 
 function initExerciseAutocomplete(input, getHistory, onSelect) {
