@@ -2134,8 +2134,11 @@ function wkSelectGroup(btn) {
   exDiv.dataset.group = current === clicked ? '' : clicked;
   exDiv.querySelectorAll('.wk-mg-btn').forEach(b => b.classList.toggle('active', b.dataset.group === exDiv.dataset.group));
   const nameInput = exDiv.querySelector('.wk-name');
-  nameInput.focus();
-  nameInput.dispatchEvent(new Event('input'));
+  // Small delay so this fires after any blur event from the pill tap
+  setTimeout(() => {
+    nameInput.focus();
+    nameInput.dispatchEvent(new Event('input'));
+  }, 10);
 }
 
 function wkCircleBg(types) {
