@@ -2135,12 +2135,11 @@ function wkSelectGroup(btn) {
   const current = exDiv.dataset.group || '';
   exDiv.dataset.group = current === clicked ? '' : clicked;
   exDiv.querySelectorAll('.wk-mg-btn').forEach(b => b.classList.toggle('active', b.dataset.group === exDiv.dataset.group));
-  const nameInput = exDiv.querySelector('.wk-name');
-  // Small delay so this fires after any blur event from the pill tap
-  setTimeout(() => {
-    nameInput.focus();
-    nameInput.dispatchEvent(new Event('input'));
-  }, 10);
+  const picklist = exDiv.querySelector('.wk-picklist');
+  if (picklist && picklist.style.display !== 'none') {
+    picklist.style.display = 'none';
+    wkToggleList(exDiv.querySelector('.wk-list-btn'), 'weights');
+  }
 }
 
 function wkCircleBg(types) {
