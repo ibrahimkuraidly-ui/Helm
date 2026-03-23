@@ -2629,6 +2629,22 @@ async function openWorkoutModal(date) {
     </div>`;
   try { await fetchExerciseHistory(); } catch(e) {}
   addWorkoutExercise();
+  // Cardio activity autocomplete
+  const cardioInput = document.getElementById('wk-cardio-activity');
+  if (cardioInput) {
+    initExerciseAutocomplete(
+      cardioInput,
+      () => {
+        const hist = _exerciseHistory.filter(e => e.type === 'cardio');
+        const histNames = new Set(hist.map(e => e.name.toLowerCase()));
+        const builtins = WK_CARDIO_ACTIVITIES
+          .filter(n => !histNames.has(n.toLowerCase()))
+          .map(n => ({ name: n, type: 'cardio', builtin: true }));
+        return [...hist, ...builtins];
+      },
+      null
+    );
+  }
 }
 
 function selectWorkoutType(type) {
