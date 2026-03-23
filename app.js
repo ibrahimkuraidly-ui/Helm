@@ -2610,7 +2610,7 @@ async function openWorkoutModal(date) {
           <div id="wk-exercises"></div>
         </div>
         <div id="wk-cardio-section" style="display:none">
-          <div class="field"><label>Activity</label><input type="text" id="wk-cardio-activity" placeholder="e.g. Running, Jump Rope"></div>
+          <div class="field" style="position:relative"><label>Activity</label><input type="text" id="wk-cardio-activity" placeholder="e.g. Running, Jump Rope" autocomplete="off"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div class="field"><label>Amount</label><input type="number" id="wk-cardio-duration" placeholder="30" min="1"></div>
             <div class="field"><label>Unit</label><select id="wk-cardio-unit"><option value="min">Minutes</option><option value="reps">Reps</option></select></div>
