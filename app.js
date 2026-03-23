@@ -2099,6 +2099,16 @@ function forceRefreshPicks() {
 
 const WK_COLORS = { weights: '#f97316', cardio: '#38bdf8', pushups: '#22c55e' };
 const WK_LABELS = { weights: 'Weights', cardio: 'Cardio', pushups: 'Bodyweight' };
+const WK_MUSCLE_GROUPS = ['Chest','Back','Shoulders','Biceps','Triceps','Legs','Core'];
+const WK_EXERCISES_BY_GROUP = {
+  Chest:     ['Bench Press','Incline Bench Press','Decline Bench Press','Dumbbell Fly','Cable Fly','Pec Deck','Dumbbell Press','Incline Dumbbell Press','Chest Dip'],
+  Back:      ['Deadlift','Pull-up','Chin-up','Lat Pulldown','Seated Cable Row','Bent Over Row','T-Bar Row','Single Arm Row','Face Pull','RDL','Rack Pull'],
+  Shoulders: ['Overhead Press','Dumbbell Shoulder Press','Arnold Press','Lateral Raise','Front Raise','Rear Delt Fly','Cable Lateral Raise','Shrug','Upright Row'],
+  Biceps:    ['Barbell Curl','Dumbbell Curl','Hammer Curl','Preacher Curl','Concentration Curl','Cable Curl','Incline Dumbbell Curl','EZ Bar Curl'],
+  Triceps:   ['Tricep Pushdown','Skull Crusher','Overhead Tricep Extension','Close Grip Bench Press','Tricep Dip','Cable Overhead Extension','Kickback'],
+  Legs:      ['Squat','Front Squat','Leg Press','Romanian Deadlift','Leg Curl','Leg Extension','Lunge','Bulgarian Split Squat','Hip Thrust','Calf Raise','Sumo Deadlift','Glute Kickback','Step Up'],
+  Core:      ['Plank','Crunch','Sit-up','Leg Raise','Hanging Leg Raise','Russian Twist','Ab Wheel','Cable Crunch','Decline Sit-up','Hollow Hold'],
+};
 let _workoutAnalysis = false;
 
 function detectMuscleGroup(name) {
