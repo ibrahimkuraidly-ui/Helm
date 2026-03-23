@@ -2617,34 +2617,34 @@ function wkToggleList(btn, type) {
   if (type === 'weights') {
     const group = container.dataset.group || '';
     const histWeights = _exerciseHistory.filter(e => e.type === 'weights');
-    const histNames = new Set(histWeights.map(e => e.name.toLowerCase()));
+    const histNames = new Set(histWeights.map(e => normalizeExName(e.name)));
     if (group) {
       const histInGroup = histWeights.filter(e => detectMuscleGroup(e.name) === group);
-      const inGroupNames = new Set(histInGroup.map(e => e.name.toLowerCase()));
+      const inGroupNames = new Set(histInGroup.map(e => normalizeExName(e.name)));
       const builtins = (WK_EXERCISES_BY_GROUP[group] || [])
-        .filter(n => !inGroupNames.has(n.toLowerCase()))
+        .filter(n => !inGroupNames.has(normalizeExName(n)))
         .map(n => ({ name: n, type: 'weights', builtin: true }));
       items = [...histInGroup, ...builtins];
     } else {
       const allBuiltins = WK_MUSCLE_GROUPS.flatMap(g =>
         (WK_EXERCISES_BY_GROUP[g] || [])
-          .filter(n => !histNames.has(n.toLowerCase()))
+          .filter(n => !histNames.has(normalizeExName(n)))
           .map(n => ({ name: n, type: 'weights', builtin: true }))
       );
       items = [...histWeights, ...allBuiltins];
     }
   } else if (type === 'bw') {
     const hist = _exerciseHistory.filter(e => e.type === 'bw');
-    const histNames = new Set(hist.map(e => e.name.toLowerCase()));
+    const histNames = new Set(hist.map(e => normalizeExName(e.name)));
     const builtins = WK_BW_ACTIVITIES
-      .filter(n => !histNames.has(n.toLowerCase()))
+      .filter(n => !histNames.has(normalizeExName(n)))
       .map(n => ({ name: n, type: 'bw', builtin: true }));
     items = [...hist, ...builtins];
   } else {
     const hist = _exerciseHistory.filter(e => e.type === 'cardio');
-    const histNames = new Set(hist.map(e => e.name.toLowerCase()));
+    const histNames = new Set(hist.map(e => normalizeExName(e.name)));
     const builtins = WK_CARDIO_ACTIVITIES
-      .filter(n => !histNames.has(n.toLowerCase()))
+      .filter(n => !histNames.has(normalizeExName(n)))
       .map(n => ({ name: n, type: 'cardio', builtin: true }));
     items = [...hist, ...builtins];
   }
