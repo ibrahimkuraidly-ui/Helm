@@ -2640,11 +2640,15 @@ function addWorkoutExercise() {
   const container = document.getElementById('wk-exercises');
   const div = document.createElement('div');
   div.className = 'wk-exercise';
+  div.dataset.group = '';
   div.style.cssText = 'background:var(--bg-input);border-radius:10px;padding:12px;margin-bottom:10px;';
   div.innerHTML = `
+    <div class="wk-mg-row">
+      ${WK_MUSCLE_GROUPS.map(g => `<button class="wk-mg-btn" data-group="${g}" onclick="wkSelectGroup(this)">${g}</button>`).join('')}
+    </div>
     <div class="field" style="margin-bottom:10px;position:relative">
       <label>Exercise Name</label>
-      <input type="text" class="wk-name" placeholder="e.g. Bench Press" autocomplete="off">
+      <input type="text" class="wk-name" placeholder="Tap a group or type a name…" autocomplete="off">
     </div>
     <div class="wk-sets"></div>
     <button class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addWorkoutSet(this)">+ Add Set</button>`;
@@ -2652,8 +2656,19 @@ function addWorkoutExercise() {
   addWorkoutSet(div.querySelector('button'));
   initExerciseAutocomplete(
     div.querySelector('.wk-name'),
-    () => _exerciseHistory.filter(e => e.type === 'weights'),
+    () => {
+      const group = div.dataset.group || '';
+      const histWeights = _exerciseHistory.filter(e => e.type === 'weights');
+      if (!group) return histWeights;
+      const histInGroup = histWeights.filter(e => detectMuscleGroup(e.name) === group);
+      const histNames = new Set(histInGroup.map(e => e.name.toLowerCase()));
+      const builtins = (WK_EXERCISES_BY_GROUP[group] || [])
+        .filter(n => !histNames.has(n.toLowerCase()))
+        .map(n => ({ name: n, type: 'weights', builtin: true }));
+      return [...histInGroup, ...builtins];
+    },
     ex => {
+      if (ex.builtin) return;
       const weightInput = div.querySelector('.wk-weight');
       const repsInput = div.querySelector('.wk-reps');
       if (weightInput) weightInput.value = ex.weight || '';
