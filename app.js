@@ -2127,6 +2127,17 @@ function detectMuscleGroup(name) {
   return null;
 }
 
+function wkSelectGroup(btn) {
+  const exDiv = btn.closest('.wk-exercise');
+  const clicked = btn.dataset.group;
+  const current = exDiv.dataset.group || '';
+  exDiv.dataset.group = current === clicked ? '' : clicked;
+  exDiv.querySelectorAll('.wk-mg-btn').forEach(b => b.classList.toggle('active', b.dataset.group === exDiv.dataset.group));
+  const nameInput = exDiv.querySelector('.wk-name');
+  nameInput.focus();
+  nameInput.dispatchEvent(new Event('input'));
+}
+
 function wkCircleBg(types) {
   if (types.length === 0) return 'transparent';
   if (types.length === 1) return WK_COLORS[types[0]];
