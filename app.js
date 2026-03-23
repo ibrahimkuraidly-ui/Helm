@@ -2101,6 +2101,7 @@ const WK_COLORS = { weights: '#f97316', cardio: '#38bdf8', pushups: '#22c55e' };
 const WK_LABELS = { weights: 'Weights', cardio: 'Cardio', pushups: 'Bodyweight' };
 const WK_MUSCLE_GROUPS = ['Chest','Back','Shoulders','Biceps','Triceps','Legs','Core'];
 const WK_CARDIO_ACTIVITIES = ['Running','Walking','Jump Rope','Cycling','Rowing','Stair Climber','Elliptical','Swimming','HIIT','Battle Ropes','Box Jumps'];
+const WK_BW_ACTIVITIES = ['Push-up','Pull-up','Chin-up','Dip','Diamond Push-up','Pike Push-up','Plank','Side Plank','Sit-up','Crunch','Leg Raise','Hanging Leg Raise','Russian Twist','Burpee','Mountain Climber','Hollow Hold','Superman','Pistol Squat','Nordic Curl','Bear Crawl'];
 const WK_EXERCISES_BY_GROUP = {
   Chest:     ['Bench Press','Incline Bench Press','Decline Bench Press','Dumbbell Fly','Cable Fly','Pec Deck','Dumbbell Press','Incline Dumbbell Press','Chest Dip'],
   Back:      ['Deadlift','Pull-up','Chin-up','Lat Pulldown','Seated Cable Row','Bent Over Row','T-Bar Row','Single Arm Row','Face Pull','RDL','Rack Pull'],
