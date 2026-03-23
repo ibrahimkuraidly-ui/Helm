@@ -2563,8 +2563,9 @@ function initExerciseAutocomplete(input, getHistory, onSelect) {
       : list.slice(0, 12);
     if (!matches.length) { dropdown.style.display = 'none'; return; }
     dropdown.innerHTML = matches.slice(0, 10).map((e, i) => {
-      const detail = e.type === 'weights' ? `${e.weight} lb × ${e.reps} reps` : `${e.amount} ${e.unit}`;
-      return `<div class="ex-autocomplete-item" data-i="${i}"><span>${e.name}</span><span class="ex-last-weight">last: ${detail}</span></div>`;
+      const detail = e.builtin ? '' : (e.type === 'weights' ? `${e.weight} lb × ${e.reps} reps` : `${e.amount} ${e.unit}`);
+      const detailHtml = detail ? `<span class="ex-last-weight">last: ${detail}</span>` : '';
+      return `<div class="ex-autocomplete-item" data-i="${i}"><span>${e.name}</span>${detailHtml}</div>`;
     }).join('');
     dropdown.style.display = '';
     dropdown.querySelectorAll('.ex-autocomplete-item').forEach((item, i) => {
