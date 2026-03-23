@@ -2667,13 +2667,21 @@ function addWorkoutExercise() {
     () => {
       const group = div.dataset.group || '';
       const histWeights = _exerciseHistory.filter(e => e.type === 'weights');
-      if (!group) return histWeights;
-      const histInGroup = histWeights.filter(e => detectMuscleGroup(e.name) === group);
-      const histNames = new Set(histInGroup.map(e => e.name.toLowerCase()));
-      const builtins = (WK_EXERCISES_BY_GROUP[group] || [])
-        .filter(n => !histNames.has(n.toLowerCase()))
-        .map(n => ({ name: n, type: 'weights', builtin: true }));
-      return [...histInGroup, ...builtins];
+      const histNames = new Set(histWeights.map(e => e.name.toLowerCase()));
+      if (group) {
+        const histInGroup = histWeights.filter(e => detectMuscleGroup(e.name) === group);
+        const inGroupNames = new Set(histInGroup.map(e => e.name.toLowerCase()));
+        const builtins = (WK_EXERCISES_BY_GROUP[group] || [])
+          .filter(n => !inGroupNames.has(n.toLowerCase()))
+          .map(n => ({ name: n, type: 'weights', builtin: true }));
+        return [...histInGroup, ...builtins];
+      }
+      const allBuiltins = WK_MUSCLE_GROUPS.flatMap(g =>
+        (WK_EXERCISES_BY_GROUP[g] || [])
+          .filter(n => !histNames.has(n.toLowerCase()))
+          .map(n => ({ name: n, type: 'weights', builtin: true }))
+      );
+      return [...histWeights, ...allBuiltins];
     },
     ex => {
       if (ex.builtin) return;
