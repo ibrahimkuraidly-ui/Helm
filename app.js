@@ -2529,6 +2529,17 @@ async function loadWorkout(silent = false) {
   }
 }
 
+function normalizeExName(name) {
+  return name.toLowerCase().trim().replace(/[-–]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function titleCaseEx(str) {
+  const minor = new Set(['a','an','the','and','or','for','of','to','at','by','in','with']);
+  return str.split(' ').map((w, i) =>
+    (i === 0 || !minor.has(w)) ? w.charAt(0).toUpperCase() + w.slice(1) : w
+  ).join(' ');
+}
+
 async function fetchExerciseHistory() {
   const since = new Date();
   since.setDate(since.getDate() - 180);
@@ -2539,17 +2550,20 @@ async function fetchExerciseHistory() {
     const ex = row.exercises;
     if (ex.type === 'weights' && ex.exercises) {
       ex.exercises.forEach(e => {
-        if (!weightsMap[e.name] && e.sets && e.sets.length > 0) {
+        const key = normalizeExName(e.name);
+        if (!weightsMap[key] && e.sets && e.sets.length > 0) {
           const lastSet = e.sets[e.sets.length - 1];
-          weightsMap[e.name] = { name: e.name, type: 'weights', weight: lastSet.weight, reps: lastSet.reps };
+          weightsMap[key] = { name: titleCaseEx(key), type: 'weights', weight: lastSet.weight, reps: lastSet.reps };
         }
       });
     } else if (ex.type === 'pushups' && ex.exercises) {
       ex.exercises.forEach(e => {
-        if (!bwMap[e.name]) bwMap[e.name] = { name: e.name, type: 'bw', amount: e.amount, unit: e.unit };
+        const key = normalizeExName(e.name);
+        if (!bwMap[key]) bwMap[key] = { name: titleCaseEx(key), type: 'bw', amount: e.amount, unit: e.unit };
       });
     } else if (ex.type === 'cardio' && ex.activity) {
-      if (!cardioMap[ex.activity]) cardioMap[ex.activity] = { name: ex.activity, type: 'cardio' };
+      const key = normalizeExName(ex.activity);
+      if (!cardioMap[key]) cardioMap[key] = { name: titleCaseEx(key), type: 'cardio' };
     }
   });
   _exerciseHistory = [...Object.values(weightsMap), ...Object.values(bwMap), ...Object.values(cardioMap)];
