@@ -2665,11 +2665,21 @@ function addBodyweightExercise() {
   const div = document.createElement('div');
   div.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:8px;margin-bottom:8px;align-items:end;';
   div.innerHTML = `
-    <div class="field" style="margin:0"><label>Exercise</label><input type="text" class="wk-bw-name" placeholder="e.g. Pull-ups, Plank"></div>
+    <div class="field" style="margin:0;position:relative"><label>Exercise</label><input type="text" class="wk-bw-name" placeholder="e.g. Pull-ups, Plank" autocomplete="off"></div>
     <div class="field" style="margin:0"><label>Amount</label><input type="number" class="wk-bw-amount" placeholder="10" min="1" style="width:70px"></div>
     <div class="field" style="margin:0"><label>Unit</label><select class="wk-bw-unit" style="width:72px"><option value="reps">Reps</option><option value="sec">Sec</option><option value="min">Min</option></select></div>
     <button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:22px;padding-bottom:10px" onclick="this.parentElement.remove()">×</button>`;
   container.appendChild(div);
+  initExerciseAutocomplete(
+    div.querySelector('.wk-bw-name'),
+    () => _exerciseHistory.filter(e => e.type === 'bw'),
+    ex => {
+      const amountInput = div.querySelector('.wk-bw-amount');
+      const unitSelect = div.querySelector('.wk-bw-unit');
+      if (amountInput) amountInput.value = ex.amount || '';
+      if (unitSelect && ex.unit) unitSelect.value = ex.unit;
+    }
+  );
 }
 
 async function saveWorkout() {
