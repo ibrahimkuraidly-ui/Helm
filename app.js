@@ -2504,7 +2504,64 @@ async function loadWorkout(silent = false) {
   }
 }
 
-function openWorkoutModal(date) {
+async function fetchExerciseHistory() {
+  const since = new Date();
+  since.setDate(since.getDate() - 180);
+  const sinceStr = since.toLocaleDateString('en-CA');
+  const rows = await api('GET', 'workouts', `user_id=eq.${currentUserId}&date=gte.${sinceStr}&order=date.desc&select=exercises`);
+  const weightsMap = {}, bwMap = {};
+  rows.forEach(row => {
+    const ex = row.exercises;
+    if (ex.type === 'weights' && ex.exercises) {
+      ex.exercises.forEach(e => {
+        if (!weightsMap[e.name] && e.sets && e.sets.length > 0) {
+          const lastSet = e.sets[e.sets.length - 1];
+          weightsMap[e.name] = { name: e.name, type: 'weights', weight: lastSet.weight, reps: lastSet.reps };
+        }
+      });
+    } else if (ex.type === 'pushups' && ex.exercises) {
+      ex.exercises.forEach(e => {
+        if (!bwMap[e.name]) bwMap[e.name] = { name: e.name, type: 'bw', amount: e.amount, unit: e.unit };
+      });
+    }
+  });
+  _exerciseHistory = [...Object.values(weightsMap), ...Object.values(bwMap)];
+}
+
+function initExerciseAutocomplete(input, getHistory, onSelect) {
+  const wrapper = input.parentElement;
+  const dropdown = document.createElement('div');
+  dropdown.className = 'ex-autocomplete';
+  dropdown.style.display = 'none';
+  wrapper.appendChild(dropdown);
+
+  function showDropdown(filter) {
+    const list = getHistory();
+    const matches = filter.trim()
+      ? list.filter(e => e.name.toLowerCase().includes(filter.toLowerCase()))
+      : list.slice(0, 12);
+    if (!matches.length) { dropdown.style.display = 'none'; return; }
+    dropdown.innerHTML = matches.slice(0, 10).map((e, i) => {
+      const detail = e.type === 'weights' ? `${e.weight} lb × ${e.reps} reps` : `${e.amount} ${e.unit}`;
+      return `<div class="ex-autocomplete-item" data-i="${i}"><span>${e.name}</span><span class="ex-last-weight">last: ${detail}</span></div>`;
+    }).join('');
+    dropdown.style.display = '';
+    dropdown.querySelectorAll('.ex-autocomplete-item').forEach((item, i) => {
+      item.addEventListener('mousedown', ev => {
+        ev.preventDefault();
+        input.value = matches[i].name;
+        dropdown.style.display = 'none';
+        onSelect && onSelect(matches[i]);
+      });
+    });
+  }
+
+  input.addEventListener('focus', () => showDropdown(input.value));
+  input.addEventListener('input', () => showDropdown(input.value));
+  input.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 150));
+}
+
+async function openWorkoutModal(date) {
   const dateObj = new Date(date+'T12:00:00');
   const dateLabel = dateObj.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
   document.getElementById('modal-root').innerHTML = `
@@ -2542,6 +2599,7 @@ function openWorkoutModal(date) {
       </div>
     </div>`;
   addWorkoutExercise();
+  try { await fetchExerciseHistory(); } catch(e) {}
 }
 
 function selectWorkoutType(type) {
