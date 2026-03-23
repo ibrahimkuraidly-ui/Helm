@@ -2578,9 +2578,10 @@ function initExerciseAutocomplete(input, getHistory, onSelect) {
     });
   }
 
-  input.addEventListener('focus', () => showDropdown(input.value));
-  input.addEventListener('input', () => showDropdown(input.value));
-  input.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 150));
+  let blurTimer = null;
+  input.addEventListener('focus', () => { clearTimeout(blurTimer); showDropdown(input.value); });
+  input.addEventListener('input', () => { clearTimeout(blurTimer); showDropdown(input.value); });
+  input.addEventListener('blur', () => { blurTimer = setTimeout(() => { dropdown.style.display = 'none'; }, 250); });
 }
 
 async function openWorkoutModal(date) {
