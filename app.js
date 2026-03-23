@@ -2590,6 +2590,98 @@ function initExerciseAutocomplete(input, getHistory, onSelect) {
   input.addEventListener('blur', () => { blurTimer = setTimeout(() => { dropdown.style.display = 'none'; }, 250); });
 }
 
+function wkToggleList(btn, type) {
+  let container;
+  if (type === 'weights') container = btn.closest('.wk-exercise');
+  else if (type === 'bw') container = btn.closest('.wk-bw-row');
+  else container = document.getElementById('wk-cardio-section');
+
+  const picklist = container.querySelector('.wk-picklist');
+  if (picklist.style.display !== 'none') { picklist.style.display = 'none'; return; }
+
+  let items = [];
+  if (type === 'weights') {
+    const group = container.dataset.group || '';
+    const histWeights = _exerciseHistory.filter(e => e.type === 'weights');
+    const histNames = new Set(histWeights.map(e => e.name.toLowerCase()));
+    if (group) {
+      const histInGroup = histWeights.filter(e => detectMuscleGroup(e.name) === group);
+      const inGroupNames = new Set(histInGroup.map(e => e.name.toLowerCase()));
+      const builtins = (WK_EXERCISES_BY_GROUP[group] || [])
+        .filter(n => !inGroupNames.has(n.toLowerCase()))
+        .map(n => ({ name: n, type: 'weights', builtin: true }));
+      items = [...histInGroup, ...builtins];
+    } else {
+      const allBuiltins = WK_MUSCLE_GROUPS.flatMap(g =>
+        (WK_EXERCISES_BY_GROUP[g] || [])
+          .filter(n => !histNames.has(n.toLowerCase()))
+          .map(n => ({ name: n, type: 'weights', builtin: true }))
+      );
+      items = [...histWeights, ...allBuiltins];
+    }
+  } else if (type === 'bw') {
+    const hist = _exerciseHistory.filter(e => e.type === 'bw');
+    const histNames = new Set(hist.map(e => e.name.toLowerCase()));
+    const builtins = WK_BW_ACTIVITIES
+      .filter(n => !histNames.has(n.toLowerCase()))
+      .map(n => ({ name: n, type: 'bw', builtin: true }));
+    items = [...hist, ...builtins];
+  } else {
+    const hist = _exerciseHistory.filter(e => e.type === 'cardio');
+    const histNames = new Set(hist.map(e => e.name.toLowerCase()));
+    const builtins = WK_CARDIO_ACTIVITIES
+      .filter(n => !histNames.has(n.toLowerCase()))
+      .map(n => ({ name: n, type: 'cardio', builtin: true }));
+    items = [...hist, ...builtins];
+  }
+
+  picklist.innerHTML = items.map(e => {
+    let badge = '';
+    if (!e.builtin) {
+      if (e.type === 'weights') badge = `<span class="ex-last-weight">last: ${e.weight} lb × ${e.reps} reps</span>`;
+      else if (e.type === 'bw') badge = `<span class="ex-last-weight">last: ${e.amount} ${e.unit}</span>`;
+    }
+    return `<div class="wk-pick-item"><span>${e.name}</span>${badge}</div>`;
+  }).join('');
+
+  picklist.querySelectorAll('.wk-pick-item').forEach((item, i) => {
+    item.addEventListener('click', () => {
+      const ex = items[i];
+      if (type === 'weights') {
+        container.querySelector('.wk-name').value = ex.name;
+        if (!ex.builtin) {
+          const w = container.querySelector('.wk-weight');
+          const r = container.querySelector('.wk-reps');
+          if (w) w.value = ex.weight || '';
+          if (r) r.value = ex.reps || '';
+          let hint = container.querySelector('.wk-last-hint');
+          if (!hint) {
+            hint = document.createElement('div');
+            hint.className = 'wk-last-hint';
+            hint.style.cssText = 'font-size:12px;color:var(--muted);margin:4px 0 8px;';
+            container.querySelector('.wk-sets').before(hint);
+          }
+          hint.textContent = `Last time: ${ex.weight} lb × ${ex.reps} reps`;
+        }
+      } else if (type === 'bw') {
+        container.querySelector('.wk-bw-name').value = ex.name;
+        if (!ex.builtin) {
+          const a = container.querySelector('.wk-bw-amount');
+          const u = container.querySelector('.wk-bw-unit');
+          if (a) a.value = ex.amount || '';
+          if (u && ex.unit) u.value = ex.unit;
+        }
+      } else {
+        const inp = document.getElementById('wk-cardio-activity');
+        if (inp) inp.value = ex.name;
+      }
+      picklist.style.display = 'none';
+    });
+  });
+
+  picklist.style.display = '';
+}
+
 async function openWorkoutModal(date) {
   const dateObj = new Date(date+'T12:00:00');
   const dateLabel = dateObj.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
