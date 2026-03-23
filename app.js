@@ -2540,6 +2540,37 @@ function titleCaseEx(str) {
   ).join(' ');
 }
 
+function levenshtein(a, b) {
+  if (Math.abs(a.length - b.length) > 3) return 99;
+  const dp = Array.from({length: a.length + 1}, (_, i) => Array.from({length: b.length + 1}, (_, j) => i || j));
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[a.length][b.length];
+}
+
+function fuzzyFindKey(map, key) {
+  if (map[key]) return key;
+  const threshold = key.length <= 5 ? 1 : 2;
+  for (const k of Object.keys(map)) {
+    if (levenshtein(key, k) <= threshold) return k;
+  }
+  return null;
+}
+
+function betterExName(existing, candidate) {
+  // Prefer whichever matches a known built-in name; otherwise prefer longer (more descriptive)
+  const allBuiltins = [
+    ...Object.values(WK_EXERCISES_BY_GROUP).flat(),
+    ...WK_BW_ACTIVITIES, ...WK_CARDIO_ACTIVITIES
+  ];
+  const eMatch = allBuiltins.some(n => normalizeExName(n) === existing);
+  const cMatch = allBuiltins.some(n => normalizeExName(n) === candidate);
+  if (eMatch && !cMatch) return existing;
+  if (cMatch && !eMatch) return candidate;
+  return existing.length >= candidate.length ? existing : candidate;
+}
+
 async function fetchExerciseHistory() {
   const since = new Date();
   since.setDate(since.getDate() - 180);
@@ -2551,7 +2582,12 @@ async function fetchExerciseHistory() {
     if (ex.type === 'weights' && ex.exercises) {
       ex.exercises.forEach(e => {
         const key = normalizeExName(e.name);
-        if (!weightsMap[key] && e.sets && e.sets.length > 0) {
+        const hit = fuzzyFindKey(weightsMap, key);
+        if (hit) {
+          // Already have this exercise (most recent session) — just fix name if candidate is better
+          const better = betterExName(hit, key);
+          if (better !== hit) weightsMap[hit].name = titleCaseEx(better);
+        } else if (e.sets && e.sets.length > 0) {
           const lastSet = e.sets[e.sets.length - 1];
           weightsMap[key] = { name: titleCaseEx(key), type: 'weights', weight: lastSet.weight, reps: lastSet.reps };
         }
@@ -2559,11 +2595,23 @@ async function fetchExerciseHistory() {
     } else if (ex.type === 'pushups' && ex.exercises) {
       ex.exercises.forEach(e => {
         const key = normalizeExName(e.name);
-        if (!bwMap[key]) bwMap[key] = { name: titleCaseEx(key), type: 'bw', amount: e.amount, unit: e.unit };
+        const hit = fuzzyFindKey(bwMap, key);
+        if (hit) {
+          const better = betterExName(hit, key);
+          if (better !== hit) bwMap[hit].name = titleCaseEx(better);
+        } else {
+          bwMap[key] = { name: titleCaseEx(key), type: 'bw', amount: e.amount, unit: e.unit };
+        }
       });
     } else if (ex.type === 'cardio' && ex.activity) {
       const key = normalizeExName(ex.activity);
-      if (!cardioMap[key]) cardioMap[key] = { name: titleCaseEx(key), type: 'cardio' };
+      const hit = fuzzyFindKey(cardioMap, key);
+      if (hit) {
+        const better = betterExName(hit, key);
+        if (better !== hit) cardioMap[hit].name = titleCaseEx(better);
+      } else {
+        cardioMap[key] = { name: titleCaseEx(key), type: 'cardio' };
+      }
     }
   });
   _exerciseHistory = [...Object.values(weightsMap), ...Object.values(bwMap), ...Object.values(cardioMap)];
