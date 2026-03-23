@@ -171,6 +171,12 @@ header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); ba
 /* Daily quote */
 .daily-quote { flex: 1; text-align: center; font-size: 10px; color: var(--muted); font-style: italic; padding: 0 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; opacity: 0.6; letter-spacing: 0.2px; }
 
+/* Muscle group pill selector */
+.wk-mg-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 4px; scrollbar-width: none; }
+.wk-mg-row::-webkit-scrollbar { display: none; }
+.wk-mg-btn { flex-shrink: 0; padding: 4px 11px; border-radius: 20px; border: 1px solid var(--border); background: none; color: var(--muted); font-size: 12px; cursor: pointer; white-space: nowrap; transition: color 0.15s, border-color 0.15s, background 0.15s; }
+.wk-mg-btn.active { color: #f97316; border-color: #f97316; background: rgba(249,115,22,0.1); }
+
 /* Exercise autocomplete dropdown */
 .ex-autocomplete { position: absolute; left: 0; right: 0; top: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; max-height: 200px; overflow-y: auto; z-index: 200; box-shadow: 0 6px 20px rgba(0,0,0,0.4); margin-top: 2px; }
 .ex-autocomplete-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; cursor: pointer; font-size: 14px; gap: 8px; }
