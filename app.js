@@ -2750,51 +2750,18 @@ function addWorkoutExercise() {
     <div class="wk-mg-row">
       ${WK_MUSCLE_GROUPS.map(g => `<button class="wk-mg-btn" data-group="${g}" onclick="wkSelectGroup(this)">${g}</button>`).join('')}
     </div>
-    <div class="field" style="margin-bottom:10px;position:relative">
-      <label>Exercise Name</label>
-      <input type="text" class="wk-name" placeholder="Tap a group or type a name…" autocomplete="off">
+    <div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:8px">
+      <div class="field" style="flex:1;margin:0">
+        <label>Exercise Name</label>
+        <input type="text" class="wk-name" placeholder="Type a name…" autocomplete="off">
+      </div>
+      <button class="wk-list-btn" onclick="wkToggleList(this,'weights')">☰</button>
     </div>
+    <div class="wk-picklist" style="display:none"></div>
     <div class="wk-sets"></div>
     <button class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addWorkoutSet(this)">+ Add Set</button>`;
   container.appendChild(div);
-  addWorkoutSet(div.querySelector('button'));
-  initExerciseAutocomplete(
-    div.querySelector('.wk-name'),
-    () => {
-      const group = div.dataset.group || '';
-      const histWeights = _exerciseHistory.filter(e => e.type === 'weights');
-      const histNames = new Set(histWeights.map(e => e.name.toLowerCase()));
-      if (group) {
-        const histInGroup = histWeights.filter(e => detectMuscleGroup(e.name) === group);
-        const inGroupNames = new Set(histInGroup.map(e => e.name.toLowerCase()));
-        const builtins = (WK_EXERCISES_BY_GROUP[group] || [])
-          .filter(n => !inGroupNames.has(n.toLowerCase()))
-          .map(n => ({ name: n, type: 'weights', builtin: true }));
-        return [...histInGroup, ...builtins];
-      }
-      const allBuiltins = WK_MUSCLE_GROUPS.flatMap(g =>
-        (WK_EXERCISES_BY_GROUP[g] || [])
-          .filter(n => !histNames.has(n.toLowerCase()))
-          .map(n => ({ name: n, type: 'weights', builtin: true }))
-      );
-      return [...histWeights, ...allBuiltins];
-    },
-    ex => {
-      if (ex.builtin) return;
-      const weightInput = div.querySelector('.wk-weight');
-      const repsInput = div.querySelector('.wk-reps');
-      if (weightInput) weightInput.value = ex.weight || '';
-      if (repsInput) repsInput.value = ex.reps || '';
-      let hint = div.querySelector('.wk-last-hint');
-      if (!hint) {
-        hint = document.createElement('div');
-        hint.className = 'wk-last-hint';
-        hint.style.cssText = 'font-size:12px;color:var(--muted);margin:-4px 0 8px;';
-        div.querySelector('.wk-sets').before(hint);
-      }
-      hint.textContent = `Last time: ${ex.weight} lb × ${ex.reps} reps`;
-    }
-  );
+  addWorkoutSet(div.querySelector('.btn-sm'));
 }
 
 function addWorkoutSet(btn) {
