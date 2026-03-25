@@ -1262,29 +1262,52 @@ async function checkMonthRollover() {
   if (localStorage.getItem(key)) return;
 
   try {
-    const [allIncomeGoals, transactions, goals] = await Promise.all([
+    const [allIncomeGoals, txns, budgets, goals] = await Promise.all([
       api('GET', 'budgets',      `user_id=eq.${currentUserId}&category=eq.__income_goal__&select=*&order=created_at.desc`),
-      api('GET', 'transactions', `user_id=eq.${currentUserId}&${monthRange(lastMonth)}&type=eq.expense&category=neq.__card_payment__&select=amount`),
+      api('GET', 'transactions', `user_id=eq.${currentUserId}&${monthRange(lastMonth)}&type=eq.expense&category=neq.__card_payment__&select=amount,category`),
+      api('GET', 'budgets',      `user_id=eq.${currentUserId}&month=eq.${lastMonth}&category=neq.__income_goal__&select=*`),
       api('GET', 'savings_goals',`user_id=eq.${currentUserId}&select=*&order=created_at`),
     ]);
 
-    if (!allIncomeGoals.length || !goals.length) { localStorage.setItem(key, '1'); return; }
+    if (!goals.length) { localStorage.setItem(key, '1'); return; }
 
-    const incomeGoalAmt = parseFloat(allIncomeGoals[0].limit_amount);
-    const totalSpent    = transactions.reduce((s, t) => s + parseFloat(t.amount), 0);
-    const surplus       = parseFloat((incomeGoalAmt - totalSpent).toFixed(2));
+    // Match income goal to this cycle's date range (same logic as dashboard)
+    const [ly, lm] = lastMonth.split('-').map(Number);
+    const csY = lm === 1 ? ly - 1 : ly, csM = lm === 1 ? 12 : lm - 1;
+    const cycleStart = `${csY}-${String(csM).padStart(2,'0')}-25`;
+    const cycleEnd   = `${lastMonth}-24`;
+    const incomeGoal = allIncomeGoals.find(g => {
+      if (!g.month.includes('_')) return false;
+      const [s, e] = g.month.split('_');
+      return s <= cycleEnd && e >= cycleStart;
+    }) || allIncomeGoals[0] || null;
+
+    if (!incomeGoal) { localStorage.setItem(key, '1'); return; }
+    const incomeGoalAmt = parseFloat(incomeGoal.limit_amount);
+
+    // Spending by category
+    const byCat = {};
+    txns.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + parseFloat(t.amount); });
+
+    // Budget limits map
+    const budgetMap = {};
+    budgets.forEach(b => { budgetMap[b.category] = parseFloat(b.limit_amount); });
+
+    // Exact same "Available to Spend" formula as dashboard
+    const totalBudgeted = BUDGET_ITEMS.reduce((s, cat) => s + (budgetMap[cat] || 0), 0);
+    const nsRemaining   = (incomeGoalAmt - totalBudgeted) - (byCat['Normal Spending'] || 0);
+    const grocRemaining = (budgetMap['Groceries'] || 0)     - (byCat['Groceries'] || 0);
+    const saraRemaining = (budgetMap['Sara Allowance'] || 0) - (byCat['Sara Allowance'] || 0);
+    const surplus       = parseFloat((nsRemaining + grocRemaining + saraRemaining).toFixed(2));
 
     localStorage.setItem(key, '1');
-    if (surplus === 0) return;
+    if (surplus <= 0) return;
 
     const goal      = goals[0];
     const newAmount = parseFloat((parseFloat(goal.current_amount || 0) + surplus).toFixed(2));
     await api('PATCH', 'savings_goals', `id=eq.${goal.id}`, { current_amount: newAmount });
 
-    const label = monthLabel(lastMonth);
-    const sign  = surplus > 0 ? '+' : '-';
-    const type  = surplus > 0 ? 'success' : 'error';
-    showToast(`${label}: ${sign}$${Math.abs(surplus).toFixed(2)} ${surplus > 0 ? 'added to' : 'taken from'} savings`, type);
+    showToast(`${monthLabel(lastMonth)}: +$${surplus.toFixed(2)} rolled over to savings`, 'success');
   } catch (e) {
     // silently skip — will retry next session
   }
