@@ -949,10 +949,11 @@ function openCardPayment(card, balance) {
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
       <div class="modal">
         <div class="modal-title">${card}</div>
-        <div style="text-align:center;margin-bottom:16px">
+        <div style="text-align:center;margin-bottom:${balance > 0 ? '8px' : '16px'}">
           <div style="font-size:13px;color:var(--muted)">Current Balance</div>
           <div style="font-size:28px;font-weight:800;color:${balance > 0 ? 'var(--red)' : 'var(--green)'}">$${Math.abs(balance).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
         </div>
+        ${balance > 0 ? `<div style="text-align:center;margin-bottom:16px"><button class="btn btn-secondary" style="font-size:12px;padding:4px 14px;opacity:0.8" onclick="resetCardBalance('${card}',${balance})">Reset to $0</button></div>` : ''}
         <div class="field">
           <label>Payment Amount</label>
           <input type="number" id="cp-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
@@ -963,6 +964,17 @@ function openCardPayment(card, balance) {
         </div>
       </div>
     </div>`;
+}
+
+async function resetCardBalance(card, balance) {
+  if (!confirm(`Record a $${balance.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} payment to zero out ${card}?`)) return;
+  const date = new Date().toISOString().slice(0,10);
+  try {
+    await api('POST','transactions','',{user_id:currentUserId,type:'expense',amount:balance,category:'__card_payment__',date,description:JSON.stringify({d:'Balance Reset',pm:card})});
+    closeModal();
+    showToast(`${card} reset to $0`,'success');
+    loadDashboard(true);
+  } catch(e) { showToast(e.message,'error'); }
 }
 
 async function submitCardPayment(card) {
