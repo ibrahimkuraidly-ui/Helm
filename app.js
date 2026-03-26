@@ -967,7 +967,8 @@ function openCardPayment(card, balance) {
 }
 
 async function resetCardBalance(card, balance) {
-  if (!confirm(`Record a $${balance.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} payment to zero out ${card}?`)) return;
+  const displayAmt = `$${Math.abs(balance).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  if (!confirm(`Zero out ${card} balance (${displayAmt})?`)) return;
   const date = new Date().toISOString().slice(0,10);
   try {
     await api('POST','transactions','',{user_id:currentUserId,type:'expense',amount:balance,category:'__card_payment__',date,description:JSON.stringify({d:'Balance Reset',pm:card})});
