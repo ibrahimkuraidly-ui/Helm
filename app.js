@@ -3046,9 +3046,12 @@ async function deleteWorkout(id) {
 
 async function _loadWorkoutAnalysisPage(el) {
   try {
+    const since1y = new Date(); since1y.setDate(since1y.getDate() - 365);
+    const since1yStr = since1y.toLocaleDateString('en-CA');
+    const all = await api('GET', 'workouts', `user_id=eq.${currentUserId}&date=gte.${since1yStr}&order=date.desc&select=*`);
+
     const since90 = new Date(); since90.setDate(since90.getDate() - 90);
-    const since90str = since90.toLocaleDateString('en-CA');
-    const all = await api('GET', 'workouts', `user_id=eq.${currentUserId}&date=gte.${since90str}&order=date.desc&select=*`);
+    const last90 = all.filter(w => new Date(w.date + 'T12:00:00') >= since90);
 
     // ── Muscle group coverage ──
     const MUSCLES = ['Chest','Back','Shoulders','Biceps','Triceps','Legs','Core'];
@@ -3056,7 +3059,7 @@ async function _loadWorkoutAnalysisPage(el) {
     const muscleCount = {};
     MUSCLES.forEach(m => { muscleLastDate[m] = null; muscleCount[m] = 0; });
 
-    all.forEach(w => {
+    last90.forEach(w => {
       if (w.exercises?.type === 'weights') {
         (w.exercises.exercises || []).forEach(ex => {
           const mg = detectMuscleGroup(ex.name);
