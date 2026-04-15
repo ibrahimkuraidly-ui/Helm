@@ -3102,51 +3102,71 @@ async function _loadWorkoutAnalysisPage(el) {
       </div>`;
     }).join('');
 
-    // ── Exercise progress ──
-    const cutoff2w = new Date(); cutoff2w.setDate(cutoff2w.getDate() - 14);
-    const cutoff4w = new Date(); cutoff4w.setDate(cutoff4w.getDate() - 28);
+    // ── Exercise progress (3 weeks vs 3 weeks, volume-based) ──
+    const cutoff3w = new Date(); cutoff3w.setDate(cutoff3w.getDate() - 21);
+    const cutoff6w = new Date(); cutoff6w.setDate(cutoff6w.getDate() - 42);
     const exMap = {};
     all.forEach(w => {
       if (w.exercises?.type !== 'weights') return;
-      const isRecent = new Date(w.date+'T12:00:00') >= cutoff2w;
-      const isPrior  = new Date(w.date+'T12:00:00') >= cutoff4w && new Date(w.date+'T12:00:00') < cutoff2w;
+      const wDate = new Date(w.date + 'T12:00:00');
+      const isRecent = wDate >= cutoff3w;
+      const isPrior  = wDate >= cutoff6w && wDate < cutoff3w;
       (w.exercises.exercises || []).forEach(ex => {
         if (!ex.name) return;
-        if (!exMap[ex.name]) exMap[ex.name] = { recent: [], prior: [] };
-        const maxW = Math.max(...(ex.sets||[]).map(s => s.weight||0), 0);
-        const avgR = (ex.sets||[]).reduce((a,s)=>a+(s.reps||0),0) / Math.max((ex.sets||[]).length,1);
-        if (isRecent) exMap[ex.name].recent.push({ maxW, avgR });
-        else if (isPrior) exMap[ex.name].prior.push({ maxW, avgR });
+        if (!exMap[ex.name]) exMap[ex.name] = {
+          recent: { vol: 0, sessions: 0, maxW: 0 },
+          prior:  { vol: 0, sessions: 0 },
+          histMaxW: 0
+        };
+        const sets = ex.sets || [];
+        const sessionVol = sets.reduce((s, set) => {
+          const w = set.weight || 0;
+          const r = set.reps || 0;
+          return s + (w > 0 ? w * r : r);
+        }, 0);
+        const sessionMaxW = Math.max(...sets.map(s => s.weight || 0), 0);
+        if (isRecent) {
+          exMap[ex.name].recent.vol += sessionVol;
+          exMap[ex.name].recent.sessions++;
+          if (sessionMaxW > exMap[ex.name].recent.maxW) exMap[ex.name].recent.maxW = sessionMaxW;
+        } else if (isPrior) {
+          exMap[ex.name].prior.vol += sessionVol;
+          exMap[ex.name].prior.sessions++;
+        }
+        // PR: track all-time max weight before the recent window
+        if (!isRecent && sessionMaxW > exMap[ex.name].histMaxW) exMap[ex.name].histMaxW = sessionMaxW;
       });
     });
 
-    const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
     let progressHTML = '';
     Object.entries(exMap).forEach(([name, data]) => {
-      if (!data.recent.length) return;
+      if (!data.recent.sessions) return;
       const mg = detectMuscleGroup(name);
-      const recentMaxW = avg(data.recent.map(d=>d.maxW));
-      const priorMaxW  = avg(data.prior.map(d=>d.maxW));
-      const recentAvgR = avg(data.recent.map(d=>d.avgR));
-      const priorAvgR  = avg(data.prior.map(d=>d.avgR));
+      const isPR = data.recent.maxW > 0 && data.recent.maxW > data.histMaxW && data.histMaxW > 0;
 
       let trend, trendColor;
-      if (!data.prior.length) {
+      if (!data.prior.sessions) {
         trend = 'New'; trendColor = 'var(--muted)';
       } else {
-        const wRatio = priorMaxW > 0 ? recentMaxW / priorMaxW : 1;
-        const rRatio = priorAvgR > 0 ? recentAvgR / priorAvgR : 1;
-        const score = (wRatio + rRatio) / 2;
-        if (score >= 1.04) { trend = '↑ Improving'; trendColor = 'var(--green)'; }
-        else if (score < 0.93) { trend = '↓ Slacking'; trendColor = 'var(--red)'; }
-        else { trend = '→ Maintaining'; trendColor = 'var(--yellow)'; }
+        const volRatio  = data.prior.vol > 0 ? data.recent.vol / data.prior.vol : 1;
+        const freqRatio = data.recent.sessions / data.prior.sessions;
+        let status = volRatio >= 1.05 ? 'improving' : volRatio < 0.93 ? 'slacking' : 'maintaining';
+        // Frequency cap: don't call it Improving if training significantly less often
+        if (status === 'improving' && freqRatio < 0.67) status = 'maintaining';
+        if (status === 'improving')  { trend = '↑ Improving';  trendColor = 'var(--green)'; }
+        else if (status === 'slacking') { trend = '↓ Slacking'; trendColor = 'var(--red)'; }
+        else                         { trend = '→ Maintaining'; trendColor = 'var(--yellow)'; }
       }
-      const wLabel = recentMaxW > 0 ? `${recentMaxW.toFixed(0)}lb max` : '';
-      const rLabel = recentAvgR > 0 ? `${recentAvgR.toFixed(1)} avg reps` : '';
+
+      const volChange  = data.prior.vol > 0 ? Math.round(((data.recent.vol / data.prior.vol) - 1) * 100) : null;
+      const wLabel     = data.recent.maxW > 0 ? `${data.recent.maxW}lb max` : '';
+      const volLabel   = volChange !== null ? `${volChange >= 0 ? '+' : ''}${volChange}% vol` : '';
+      const prBadge    = isPR ? ' <span style="color:#f97316;font-weight:700">★ PR</span>' : '';
+
       progressHTML += `<div class="list-item">
         <div class="list-item-left">
-          <div class="list-item-title">${name}</div>
-          <div class="list-item-sub">${mg || ''}${wLabel ? ' · ' + wLabel : ''}${rLabel ? ' · ' + rLabel : ''}</div>
+          <div class="list-item-title">${name}${prBadge}</div>
+          <div class="list-item-sub">${[mg, wLabel, volLabel].filter(Boolean).join(' · ')}</div>
         </div>
         <div style="font-size:12px;font-weight:700;color:${trendColor};text-align:right">${trend}</div>
       </div>`;
