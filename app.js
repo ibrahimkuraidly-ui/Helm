@@ -3182,7 +3182,7 @@ async function _loadWorkoutAnalysisPage(el) {
         ${muscleHTML || '<div style="color:var(--muted);font-size:13px">No weight training logged yet.</div>'}
       </div>
       <div class="card" style="margin-top:0">
-        <div class="card-title">Exercise Progress · Last 4 Weeks</div>
+        <div class="card-title">Exercise Progress · Last 6 Weeks</div>
         ${progressHTML || '<div style="color:var(--muted);font-size:13px">Log a few weeks of workouts to see progress.</div>'}
       </div>
     </div>`;
