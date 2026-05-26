@@ -1037,7 +1037,7 @@ async function submitTxn() {
 }
 
 async function deleteTxn(id) {
-  if (!confirm('Delete this transaction?')) return;
+  if (!await showConfirm('Delete this transaction?')) return;
   try {
     await api('DELETE', 'transactions', `id=eq.${id}`);
     showToast('Deleted', 'success');
