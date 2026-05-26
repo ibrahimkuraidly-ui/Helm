@@ -1685,10 +1685,15 @@ async function loadPortfolio(silent = false) {
       <span class="section-title">Investments</span>
       <button class="btn btn-primary btn-sm" onclick="openAddAccount()">+ Add Account</button>
     </div>
+    <div class="nw-banner" style="margin-bottom:8px">
+      <div class="nw-label">Net Worth</div>
+      <div class="nw-value">${privVal(fmtS(netWorth))}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Portfolio + Savings</div>
+    </div>
     <div class="stat-row two" style="margin-bottom:12px">
       <div class="nw-banner" style="flex:1;margin-bottom:0">
-        <div class="nw-label">Total Portfolio</div>
-        <div class="nw-value">${privVal(fmtS(total))}</div>
+        <div class="nw-label">Portfolio</div>
+        <div class="nw-value" style="font-size:22px">${privVal(fmtS(total))}</div>
       </div>
       <div class="nw-banner" style="flex:1;margin-bottom:0" id="gold-card">
         <div class="nw-label">Gold (oz)</div>
