@@ -891,13 +891,18 @@ function renderTxnList(txns) {
     html += `<div style="font-size:11px;color:var(--muted);margin:8px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${label}</div>
       <div class="card" style="padding:0 14px">`;
     items.forEach(t => {
+      const desc = txnDesc(t);
+      const card = txnCard(t);
+      const escapedDesc = desc.replace(/'/g,"\\'");
+      const escapedCat = t.category.replace(/'/g,"\\'");
       html += `<div class="list-item">
         <div class="list-item-left">
-          <div class="list-item-title">${txnDesc(t)}</div>
-          <div class="list-item-sub"><span class="cat-tag">${t.category}</span>${txnCard(t) !== 'Debit' ? ` · <span class="cat-tag">${txnCard(t)}</span>` : ''}</div>
+          <div class="list-item-title">${desc}</div>
+          <div class="list-item-sub"><span class="cat-tag">${t.category}</span>${card !== 'Debit' ? ` · <span class="cat-tag">${card}</span>` : ''}</div>
         </div>
-        <div class="list-item-right" style="display:flex;align-items:center;gap:8px">
+        <div class="list-item-right" style="display:flex;align-items:center;gap:6px">
           <span class="amount-expense">${privVal('-' + fmt(t.amount))}</span>
+          <button class="btn btn-sm btn-secondary" style="padding:5px 8px" onclick="openEditTxn('${t.id}',${t.amount},'${escapedDesc}','${escapedCat}','${t.date}','${card}')">✎</button>
           <button class="btn btn-sm btn-danger" onclick="deleteTxn('${t.id}')">✕</button>
         </div>
       </div>`;
