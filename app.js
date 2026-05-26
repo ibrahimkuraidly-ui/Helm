@@ -1458,7 +1458,7 @@ async function loadSavings(silent = false) {
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
             <div>
               <div style="font-size:16px;font-weight:700">${g.name}</div>
-              ${extra ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${extra}</div>` : ''}
+              ${extra ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${extra}${monthlyNeeded ? ` · <span style="color:var(--accent)">${fmt(monthlyNeeded)}/mo needed</span>` : ''}</div>` : ''}
             </div>
             <div style="display:flex;gap:6px">
               <button class="btn btn-sm btn-primary" onclick="openDeposit('${g.id}',${parseFloat(g.current_amount || 0)})">+ Add</button>
