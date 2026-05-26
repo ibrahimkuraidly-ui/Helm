@@ -1370,6 +1370,28 @@ async function submitEditBudget(id) {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
+async function copyAllFromLastMonth() {
+  const lastMonth = prevMonth(_activeMonth);
+  try {
+    const [lastBudgets, currentBudgets] = await Promise.all([
+      api('GET', 'budgets', `user_id=eq.${currentUserId}&month=eq.${lastMonth}&category=neq.__income_goal__&select=*`),
+      api('GET', 'budgets', `user_id=eq.${currentUserId}&month=eq.${_activeMonth}&category=neq.__income_goal__&select=*`),
+    ]);
+    if (!lastBudgets.length) { showToast('No budgets set for last month', 'info'); return; }
+    const lastMap = {};
+    lastBudgets.forEach(b => { lastMap[b.category] = parseFloat(b.limit_amount); });
+    const currentMap = {};
+    currentBudgets.forEach(b => { currentMap[b.category] = b.id; });
+    const updates = BUDGET_ITEMS.filter(cat => lastMap[cat] > 0 && currentMap[cat]);
+    if (!updates.length) { showToast('Nothing to copy', 'info'); return; }
+    await Promise.all(updates.map(cat =>
+      api('PATCH', 'budgets', `id=eq.${currentMap[cat]}`, { limit_amount: lastMap[cat] })
+    ));
+    showToast(`Copied ${updates.length} categories`, 'success');
+    loadBudget(true);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
 async function copyFromLastMonth(currentId, category) {
   const lastMonth = prevMonth(_activeMonth);
   try {
