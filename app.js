@@ -1362,7 +1362,7 @@ async function submitDeposit(id, current) {
 }
 
 async function deleteGoal(id) {
-  if (!confirm('Delete this savings goal?')) return;
+  if (!await showConfirm('Delete this savings goal?')) return;
   try {
     await api('DELETE', 'savings_goals', `id=eq.${id}`);
     showToast('Deleted', 'success'); loadSavings(true);
