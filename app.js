@@ -377,6 +377,23 @@ function showToast(msg, type = 'info') {
 
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 
+function showConfirm(msg, confirmLabel = 'Delete') {
+  return new Promise(resolve => {
+    document.getElementById('modal-root').innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal" style="max-height:unset">
+          <div style="font-size:15px;font-weight:600;margin-bottom:20px">${msg}</div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" id="confirm-no">Cancel</button>
+            <button class="btn btn-danger" id="confirm-yes">${confirmLabel}</button>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('confirm-no').onclick = () => { closeModal(); resolve(false); };
+    document.getElementById('confirm-yes').onclick = () => { closeModal(); resolve(true); };
+  });
+}
+
 // ─── Smart Categorization (keyword-based) ────────────────────────────────────
 
 const CAT_KEYWORDS = {
