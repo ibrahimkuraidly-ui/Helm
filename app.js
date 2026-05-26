@@ -409,6 +409,7 @@ function normalizeDesc(val) {
 }
 
 async function loadCatCorrections() {
+  if (_catCorrectionsLoaded) return;
   try {
     const rows = await api('GET', 'category_corrections',
       `user_id=eq.${currentUserId}&select=description_key,category&order=created_at.desc`);
@@ -416,6 +417,7 @@ async function loadCatCorrections() {
     rows.forEach(r => {
       if (!_catCorrections[r.description_key]) _catCorrections[r.description_key] = r.category;
     });
+    _catCorrectionsLoaded = true;
   } catch (_) {}
 }
 
