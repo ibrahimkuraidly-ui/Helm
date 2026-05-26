@@ -796,12 +796,19 @@ async function loadDashboard(silent = false) {
     if (recentTxns.length) {
       html += `<div class="card"><div class="card-title">Recent Spending</div>`;
       recentTxns.forEach(t => {
+        const desc = txnDesc(t);
+        const card = txnCard(t);
+        const escapedDesc = desc.replace(/'/g,"\\'");
+        const escapedCat = t.category.replace(/'/g,"\\'");
         html += `<div class="list-item">
           <div class="list-item-left">
-            <div class="list-item-title">${txnDesc(t)}</div>
-            <div class="list-item-sub"><span class="cat-tag">${t.category}</span>${txnCard(t) !== 'Debit' ? ` · <span class="cat-tag">${txnCard(t)}</span>` : ''} · ${fmtDate(t.date)}</div>
+            <div class="list-item-title">${desc}</div>
+            <div class="list-item-sub"><span class="cat-tag">${t.category}</span>${card !== 'Debit' ? ` · <span class="cat-tag">${card}</span>` : ''} · ${fmtDate(t.date)}</div>
           </div>
-          <span class="amount-expense">-${fmt(t.amount)}</span>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <span class="amount-expense">-${fmt(t.amount)}</span>
+            <button class="btn btn-sm btn-secondary" style="padding:4px 7px;font-size:11px;white-space:nowrap" onclick="openReAddTxn(${t.amount},'${escapedDesc}','${escapedCat}','${card}')">+</button>
+          </div>
         </div>`;
       });
       html += `</div>`;
