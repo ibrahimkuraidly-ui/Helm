@@ -1664,6 +1664,8 @@ async function loadPortfolio(silent = false) {
     const latestByAcct = {};
     snapshots.forEach(s => { latestByAcct[s.account_id] = parseFloat(s.balance); });
     const total = Object.values(latestByAcct).reduce((a, b) => a + b, 0);
+    const savingsTotal = savingsGoals.reduce((s, g) => s + parseFloat(g.current_amount || 0), 0);
+    const netWorth = total + savingsTotal;
 
     // Portfolio chart: sum all balances per date
     const byDate = {};
