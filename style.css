@@ -199,3 +199,9 @@ header { position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); ba
 .wk-pick-item:last-child { border-bottom: none; }
 .wk-pick-item:active { background: var(--bg-input); }
 .ex-last-weight { font-size: 11px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+
+/* Exercise autocomplete dropdown */
+.ex-autocomplete { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; z-index: 50; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.3); margin-top: 2px; }
+.ex-autocomplete-item { padding: 10px 14px; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+.ex-autocomplete-item:last-child { border-bottom: none; }
+.ex-autocomplete-item:active { background: var(--bg-input); }
