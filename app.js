@@ -1678,7 +1678,7 @@ async function submitSnapshot(accountId) {
 }
 
 async function deleteAccount(id) {
-  if (!confirm('Delete this account and all its history?')) return;
+  if (!await showConfirm('Delete this account and all its history?')) return;
   try {
     await api('DELETE', 'investment_snapshots', `account_id=eq.${id}`);
     await api('DELETE', 'crypto_holdings',      `account_id=eq.${id}&user_id=eq.${currentUserId}`).catch(() => {});
