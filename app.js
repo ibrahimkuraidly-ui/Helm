@@ -1009,6 +1009,7 @@ async function submitTxn() {
       const shouldSave = (_autoSuggestedCat && category !== _autoSuggestedCat) ||
                          (!_autoSuggestedCat && category !== 'Normal Spending');
       if (shouldSave) {
+        _catCorrectionsLoaded = false;
         api('POST', 'category_corrections', '', { user_id: currentUserId, description_key: key, category }).catch(() => {});
       }
     }
