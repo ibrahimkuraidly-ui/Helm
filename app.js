@@ -1440,9 +1440,19 @@ async function loadSavings(silent = false) {
       goals.forEach(g => {
         const p   = pct(parseFloat(g.current_amount || 0), parseFloat(g.target_amount));
         let extra = '';
+        let monthlyNeeded = null;
         if (g.target_date) {
           const diff = Math.ceil((new Date(g.target_date) - new Date()) / 86400000);
-          extra = diff > 0 ? `${diff} days left` : 'Past target date';
+          if (diff > 0) {
+            extra = `${diff} days left`;
+            const stillNeeded = parseFloat(g.target_amount) - parseFloat(g.current_amount || 0);
+            if (stillNeeded > 0) {
+              const monthsLeft = Math.max(1, Math.ceil(diff / 30.44));
+              monthlyNeeded = stillNeeded / monthsLeft;
+            }
+          } else {
+            extra = 'Past target date';
+          }
         }
         html += `<div class="card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
