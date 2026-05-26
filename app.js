@@ -16,6 +16,10 @@ let _exerciseHistory = [];
 let _groceryCollapsed = {};
 let _waterCache = null;
 let _txnCache = [];
+let _incomeTxnCache = [];
+let _cardBalanceCache = null;
+let _catCorrectionsLoaded = false;
+let _txnSpendingChart = null;
 
 const ACCOUNT_TYPES = ['401k','Roth IRA','Traditional IRA','Brokerage','HSA','Crypto','Savings Bond','Other'];
 
