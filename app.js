@@ -2029,9 +2029,9 @@ async function loadMarkets() {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading — tap refresh</div></div>`;
   }
 
-  // Auto-refresh every 60s — restart the timer each call so only one runs at a time
+  // Auto-refresh every 5 min — restart timer each call so only one runs at a time
   clearTimeout(_marketsTimer);
-  _marketsTimer = setTimeout(loadMarkets, 300000); // CoinPaprika updates every 5 min
+  _marketsTimer = setTimeout(loadMarkets, 300000);
 }
 
 // ─── Daily Picks ──────────────────────────────────────────────────────────────
