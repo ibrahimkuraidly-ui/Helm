@@ -647,14 +647,20 @@ async function loadDashboard(silent = false) {
   if (!silent) el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
   try {
     const mr = monthRange(_activeMonth);
-    const [txns, budgets, goals, snapshots, allIncomeGoals, allCardTxns] = await Promise.all([
+    const basePromises = [
       api('GET', 'transactions', `user_id=eq.${currentUserId}&${mr}&type=eq.expense&category=neq.__card_payment__&select=*&order=date.desc,created_at.desc`),
       api('GET', 'budgets',      `user_id=eq.${currentUserId}&month=eq.${_activeMonth}&category=neq.__income_goal__&select=*`),
       api('GET', 'savings_goals', `user_id=eq.${currentUserId}&select=*`),
       api('GET', 'investment_snapshots', `user_id=eq.${currentUserId}&select=*&order=date.desc`),
       api('GET', 'budgets', `user_id=eq.${currentUserId}&category=eq.__income_goal__&select=*&order=created_at.desc`),
-      api('GET', 'transactions', `user_id=eq.${currentUserId}&type=eq.expense&select=amount,description,category`),
-    ]);
+    ];
+    if (!_cardBalanceCache) {
+      basePromises.push(api('GET', 'transactions', `user_id=eq.${currentUserId}&type=eq.expense&select=amount,description,category`));
+    }
+    const results = await Promise.all(basePromises);
+    const [txns, budgets, goals, snapshots, allIncomeGoals] = results;
+    const allCardTxns = _cardBalanceCache || results[5] || [];
+    if (!_cardBalanceCache && results[5]) _cardBalanceCache = results[5];
 
     // Compute cycle range for the active month (25th of prev → 24th of this)
     const [ay, am] = _activeMonth.split('-').map(Number);
