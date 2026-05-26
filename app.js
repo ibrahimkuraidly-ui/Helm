@@ -1069,9 +1069,10 @@ function openCardPayment(card, balance) {
 
 async function resetCardBalance(card, balance) {
   const displayAmt = `$${Math.abs(balance).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  if (!confirm(`Zero out ${card} balance (${displayAmt})?`)) return;
+  if (!await showConfirm(`Zero out ${card} balance (${displayAmt})?`, 'Reset')) return;
   const date = new Date().toISOString().slice(0,10);
   try {
+    _cardBalanceCache = null;
     await api('POST','transactions','',{user_id:currentUserId,type:'expense',amount:balance,category:'__card_payment__',date,description:JSON.stringify({d:'Balance Reset',pm:card})});
     closeModal();
     showToast(`${card} reset to $0`,'success');
