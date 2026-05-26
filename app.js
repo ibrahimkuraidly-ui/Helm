@@ -1085,6 +1085,7 @@ async function submitCardPayment(card) {
   if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
   const date = new Date().toISOString().slice(0, 10);
   try {
+    _cardBalanceCache = null;
     await api('POST', 'transactions', '', { user_id: currentUserId, type: 'expense', amount, category: '__card_payment__', date, description: JSON.stringify({ d: 'Card Payment', pm: card }) });
     closeModal();
     showToast('Payment recorded', 'success');
