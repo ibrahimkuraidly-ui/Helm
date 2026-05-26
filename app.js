@@ -1025,6 +1025,7 @@ async function submitTxn() {
   if (!amount || !date) { showToast('Enter amount and date', 'error'); return; }
   const description = JSON.stringify({ d, pm });
   try {
+    _cardBalanceCache = null;
     await api('POST', 'transactions', '', { user_id: currentUserId, type: 'expense', amount, category, date, description });
     // Save to correction history if user overrode the suggestion, or picked manually with no suggestion
     if (d) {
