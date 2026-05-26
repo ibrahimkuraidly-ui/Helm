@@ -3058,7 +3058,7 @@ async function saveWorkout() {
 }
 
 async function deleteWorkout(id) {
-  if (!confirm('Delete this workout?')) return;
+  if (!await showConfirm('Delete this workout?')) return;
   try {
     await api('DELETE', 'workouts', `id=eq.${id}`);
     showToast('Deleted', 'success');
