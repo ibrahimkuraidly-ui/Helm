@@ -1801,7 +1801,6 @@ async function saveHoldings(accountId) {
 // ─── Monthly Income Goal ──────────────────────────────────────────────────────
 
 function openSetIncome(existingId, currentAmount, currentStart, currentEnd) {
-  // Smart defaults: cycle starts on the 25th
   const today = new Date();
   let defaultStart, defaultEnd;
   if (currentStart && currentEnd) {
@@ -1809,13 +1808,14 @@ function openSetIncome(existingId, currentAmount, currentStart, currentEnd) {
     defaultEnd   = currentEnd;
   } else {
     const day = today.getDate();
-    if (day >= 25) {
-      defaultStart = new Date(today.getFullYear(), today.getMonth(), 25).toISOString().slice(0, 10);
-    } else {
-      defaultStart = new Date(today.getFullYear(), today.getMonth() - 1, 25).toISOString().slice(0, 10);
+    let y = today.getFullYear(), m = today.getMonth() + 1;
+    if (day < 25) {
+      m--; if (m < 1) { m = 12; y--; }
     }
-    const [sy, sm] = defaultStart.split('-').map(Number);
-    defaultEnd = new Date(sy, sm, 24).toISOString().slice(0, 10);
+    defaultStart = `${y}-${String(m).padStart(2,'0')}-25`;
+    const endM = m === 12 ? 1 : m + 1;
+    const endY = m === 12 ? y + 1 : y;
+    defaultEnd = `${endY}-${String(endM).padStart(2,'0')}-24`;
   }
 
   document.getElementById('modal-root').innerHTML = `
