@@ -1288,7 +1288,10 @@ async function loadBudget(silent = false) {
     const nsSpent  = spentMap['Normal Spending'] || 0;
     const nsBudget = normalSpending;
 
-    let html = `<div class="month-bar"><span class="month-label">${monthLabel(_activeMonth)}</span></div>`;
+    let html = `<div class="month-bar">
+      <span class="month-label">${monthLabel(_activeMonth)}</span>
+      <button class="btn btn-sm btn-secondary" onclick="copyAllFromLastMonth()">↩ Copy All</button>
+    </div>`;
 
     // Normal Spending card — always first
     if (nsBudget !== null) {
