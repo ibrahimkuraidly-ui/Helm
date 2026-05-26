@@ -1050,6 +1050,98 @@ async function submitTxn() {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
+function openReAddTxn(amount, desc, category, pm) {
+  _autoSuggestedCat = null;
+  loadCatCorrections();
+  const today = new Date().toISOString().slice(0, 10);
+  const cats = ['Normal Spending', ...BUDGET_ITEMS, 'Other'];
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-title">Add Expense</div>
+        <div class="field"><label>Amount</label><input type="number" id="t-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal" value="${amount}"></div>
+        <div class="field"><label>Description (optional)</label><input type="text" id="t-desc" placeholder="e.g. Grocery run, Netflix" oninput="debounceCat(this.value)" value="${desc}"></div>
+        <div class="field"><label>Category <span id="cat-hint" style="font-size:11px;color:var(--muted)"></span></label><select id="t-cat">${cats.map(c => `<option${c===category?' selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="field"><label>Date</label><input type="date" id="t-date" value="${today}"></div>
+        <div class="field"><label>Card</label><select id="t-pm"><option${pm==='Debit'?' selected':''}>Debit</option><option${pm==='Capital One'?' selected':''}>Capital One</option><option${pm==='Secure'?' selected':''}>Secure</option></select></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitTxn()">Add</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openEditTxn(id, amount, desc, category, date, pm) {
+  const cats = ['Normal Spending', ...BUDGET_ITEMS, 'Other'];
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-title">Edit Expense</div>
+        <div class="field"><label>Amount</label><input type="number" id="te-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal" value="${amount}"></div>
+        <div class="field"><label>Description (optional)</label><input type="text" id="te-desc" placeholder="e.g. Grocery run" value="${desc}"></div>
+        <div class="field"><label>Category</label><select id="te-cat">${cats.map(c => `<option${c===category?' selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="field"><label>Date</label><input type="date" id="te-date" value="${date}"></div>
+        <div class="field"><label>Card</label><select id="te-pm"><option${pm==='Debit'?' selected':''}>Debit</option><option${pm==='Capital One'?' selected':''}>Capital One</option><option${pm==='Secure'?' selected':''}>Secure</option></select></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitEditTxn('${id}')">Save</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function submitEditTxn(id) {
+  const amount = parseFloat(document.getElementById('te-amount').value);
+  const category = document.getElementById('te-cat').value;
+  const date = document.getElementById('te-date').value;
+  const d = document.getElementById('te-desc').value.trim();
+  const pm = document.getElementById('te-pm').value;
+  if (!amount || !date) { showToast('Enter amount and date', 'error'); return; }
+  const description = JSON.stringify({ d, pm });
+  try {
+    _cardBalanceCache = null;
+    await api('PATCH', 'transactions', `id=eq.${id}`, { amount, category, date, description });
+    closeModal();
+    showToast('Updated', 'success');
+    const activeTab = document.querySelector('.tab.active')?.dataset.tab;
+    if (activeTab === 'dashboard') loadDashboard(true);
+    else if (activeTab === 'transactions') loadTransactions(true);
+    else if (activeTab === 'budget') loadBudget(true);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function openAddIncome() {
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-title">Log Income</div>
+        <div class="field"><label>Amount</label><input type="number" id="inc-txn-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>
+        <div class="field"><label>Description (optional)</label><input type="text" id="inc-txn-desc" placeholder="e.g. Paycheck, Freelance"></div>
+        <div class="field"><label>Date</label><input type="date" id="inc-txn-date" value="${today}"></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitIncomeTxn()">Log</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function submitIncomeTxn() {
+  const amount = parseFloat(document.getElementById('inc-txn-amount').value);
+  const date = document.getElementById('inc-txn-date').value;
+  const d = document.getElementById('inc-txn-desc').value.trim();
+  if (!amount || !date) { showToast('Enter amount and date', 'error'); return; }
+  const description = JSON.stringify({ d, pm: 'Debit' });
+  try {
+    await api('POST', 'transactions', '', { user_id: currentUserId, type: 'income', amount, category: 'Income', date, description });
+    closeModal();
+    showToast('Income logged', 'success');
+    loadTransactions(true);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
 async function deleteTxn(id) {
   if (!await showConfirm('Delete this transaction?')) return;
   try {
