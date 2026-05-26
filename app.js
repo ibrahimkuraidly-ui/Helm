@@ -1642,10 +1642,11 @@ async function loadPortfolio(silent = false) {
   const el = document.getElementById('portfolio-content');
   if (!silent) el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
   try {
-    const [accounts, snapshots, allHoldings] = await Promise.all([
+    const [accounts, snapshots, allHoldings, savingsGoals] = await Promise.all([
       api('GET', 'investment_accounts',  `user_id=eq.${currentUserId}&select=*&order=created_at`),
       api('GET', 'investment_snapshots', `user_id=eq.${currentUserId}&select=*&order=date.asc`),
       api('GET', 'crypto_holdings',      `user_id=eq.${currentUserId}&select=*`).catch(() => []),
+      api('GET', 'savings_goals',        `user_id=eq.${currentUserId}&select=current_amount`).catch(() => []),
     ]);
 
     // Build holdings map
