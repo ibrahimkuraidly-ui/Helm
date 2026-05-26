@@ -908,18 +908,21 @@ function renderTxnList(txns) {
 }
 
 async function loadTransactions(silent = false) {
-  hideFab();
+  showFab();
   const el = document.getElementById('txn-content');
   if (!silent) el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
   try {
-    const [txns, allIncomeGoals] = await Promise.all([
+    const [txns, incomeTxns, allIncomeGoals] = await Promise.all([
       api('GET', 'transactions', `user_id=eq.${currentUserId}&${monthRange(_activeMonth)}&type=eq.expense&category=neq.__card_payment__&select=*&order=date.desc,created_at.desc`),
+      api('GET', 'transactions', `user_id=eq.${currentUserId}&${monthRange(_activeMonth)}&type=eq.income&select=*&order=date.desc,created_at.desc`),
       api('GET', 'budgets',      `user_id=eq.${currentUserId}&category=eq.__income_goal__&select=*&order=created_at.desc`),
     ]);
 
     _txnCache = txns;
+    _incomeTxnCache = incomeTxns;
 
-    const totalSpent = txns.reduce((s, t) => s + parseFloat(t.amount), 0);
+    const totalSpent  = txns.reduce((s, t) => s + parseFloat(t.amount), 0);
+    const totalIncome = incomeTxns.reduce((s, t) => s + parseFloat(t.amount), 0);
 
     const [ty, tm] = _activeMonth.split('-').map(Number);
     const tCycleStartY = tm === 1 ? ty - 1 : ty;
@@ -934,20 +937,50 @@ async function loadTransactions(silent = false) {
     const incomeGoalAmt = activeGoal ? parseFloat(activeGoal.limit_amount) : null;
     const remaining     = incomeGoalAmt != null ? incomeGoalAmt - totalSpent : null;
 
-    // Build category list from actual transactions + standard categories
+    // Build category list
     const usedCats = [...new Set(txns.map(t => t.category))].sort();
     const allCats  = ['Normal Spending', ...BUDGET_ITEMS, 'Other'].filter(c => usedCats.includes(c));
-    // Include any other categories not in standard list
     usedCats.forEach(c => { if (!allCats.includes(c)) allCats.push(c); });
-
     const catOptions = allCats.map(c => `<option value="${c}">${c}</option>`).join('');
 
+    // Spending by category for donut chart
+    const byCat = {};
+    txns.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + parseFloat(t.amount); });
+    const chartEntries = Object.entries(byCat).sort((a,b) => b[1]-a[1]).slice(0, 8);
+    const PIE_COLORS = ['#3b82f6','#f97316','#a855f7','#22c55e','#ec4899','#06b6d4','#eab308','#ef4444'];
+
     let html = `
-      <div class="month-bar"><span class="month-label">${monthLabel(_activeMonth)}</span></div>
-      <div class="stat-row two" style="margin-bottom:12px">
-        <div class="stat-card"><div class="stat-label">Spent</div><div class="stat-value red">${privVal(fmtS(totalSpent))}</div></div>
-        <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value ${remaining != null && remaining >= 0 ? 'green' : 'red'}">${remaining != null ? privVal(fmtS(remaining)) : '—'}</div></div>
+      <div class="month-bar">
+        <button class="month-nav" onclick="_activeMonth=prevMonth(_activeMonth);loadTransactions()">&#8249;</button>
+        <span class="month-label">${monthLabel(_activeMonth)}</span>
+        <button class="month-nav" onclick="_activeMonth=nextMonth(_activeMonth);loadTransactions()">&#8250;</button>
       </div>
+      <div class="stat-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px">
+        <div class="stat-card"><div class="stat-label">Spent</div><div class="stat-value red">${privVal(fmtS(totalSpent))}</div></div>
+        <div class="stat-card" style="cursor:pointer" onclick="openAddIncome()"><div class="stat-label">Income</div><div class="stat-value green">${totalIncome > 0 ? privVal(fmtS(totalIncome)) : '+ Log'}</div></div>
+        <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value ${remaining != null && remaining >= 0 ? 'green' : 'red'}">${remaining != null ? privVal(fmtS(remaining)) : '—'}</div></div>
+      </div>`;
+
+    if (chartEntries.length > 0) {
+      html += `<div class="card" style="margin-bottom:12px">
+        <div class="card-title">Spending Breakdown</div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="position:relative;width:96px;height:96px;flex-shrink:0"><canvas id="txn-donut" width="96" height="96"></canvas></div>
+          <div style="flex:1;min-width:0">`;
+      chartEntries.forEach(([cat, amt], i) => {
+        const p = totalSpent > 0 ? Math.round((amt / totalSpent) * 100) : 0;
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <div style="display:flex;align-items:center;gap:6px;min-width:0">
+            <div style="width:8px;height:8px;border-radius:50%;background:${PIE_COLORS[i % PIE_COLORS.length]};flex-shrink:0"></div>
+            <span style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cat}</span>
+          </div>
+          <span style="font-size:11px;font-weight:700;flex-shrink:0;margin-left:4px">${p}%</span>
+        </div>`;
+      });
+      html += `</div></div></div>`;
+    }
+
+    html += `
       <div class="txn-filter-bar">
         <div class="txn-search-wrap">
           <svg class="txn-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -960,40 +993,37 @@ async function loadTransactions(silent = false) {
         </select>
       </div>
       <div id="txn-filter-total" class="txn-filter-total"></div>
-      <div id="txn-list">`;
+      <div id="txn-list"></div>`;
 
-    if (txns.length) {
-      const byDate = {};
-      txns.forEach(t => { (byDate[t.date] = byDate[t.date] || []).push(t); });
-      Object.entries(byDate).forEach(([date, items]) => {
-        const label = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        html += `<div style="font-size:11px;color:var(--muted);margin:8px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${label}</div>
-          <div class="card" style="padding:0 14px">`;
-        items.forEach(t => {
-          html += `<div class="list-item">
-            <div class="list-item-left">
-              <div class="list-item-title">${txnDesc(t)}</div>
-              <div class="list-item-sub"><span class="cat-tag">${t.category}</span>${txnCard(t) !== 'Debit' ? ` · <span class="cat-tag">${txnCard(t)}</span>` : ''}</div>
-            </div>
-            <div class="list-item-right" style="display:flex;align-items:center;gap:8px">
-              <span class="amount-expense">${privVal('-' + fmt(t.amount))}</span>
-              <button class="btn btn-sm btn-danger" onclick="deleteTxn('${t.id}')">✕</button>
-            </div>
-          </div>`;
-        });
-        html += `</div>`;
-      });
-    } else {
-      html += `<div class="empty-state"><div class="empty-state-icon">💸</div><div class="empty-state-text">No expenses this month.<br>Tap + to add one.</div></div>`;
-    }
-
-    html += `</div>`;
     el.innerHTML = html;
 
-    // Wire up search clear button visibility
     document.getElementById('txn-search').addEventListener('input', function() {
       document.getElementById('txn-search-clear').style.display = this.value ? 'flex' : 'none';
     });
+
+    renderTxnList(_txnCache);
+
+    if (chartEntries.length > 0) {
+      const ctx = document.getElementById('txn-donut')?.getContext('2d');
+      if (ctx) {
+        if (_txnSpendingChart) { _txnSpendingChart.destroy(); _txnSpendingChart = null; }
+        _txnSpendingChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: chartEntries.map(([cat]) => cat),
+            datasets: [{ data: chartEntries.map(([,v]) => v), backgroundColor: PIE_COLORS, borderWidth: 0, hoverOffset: 4 }]
+          },
+          options: {
+            responsive: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: c => `${c.label}: ${_privacyMode ? '••••' : fmt(c.parsed)}` } }
+            },
+            cutout: '62%',
+          }
+        });
+      }
+    }
 
   } catch (e) {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading</div></div>`;
