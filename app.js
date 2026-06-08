@@ -2935,6 +2935,23 @@ async function fetchExerciseHistory() {
       }
     }
   });
+  // Second pass: compute all-time max weight per exercise (for PR detection)
+  rows.forEach(row => {
+    const ex = row.exercises;
+    if (ex.type === 'weights' && ex.exercises) {
+      ex.exercises.forEach(e => {
+        const key = normalizeExName(e.name);
+        const canonKey = fuzzyFindKey(weightsMap, key);
+        if (canonKey) {
+          (e.sets || []).forEach(s => {
+            if ((s.weight || 0) > (weightsMap[canonKey].maxWeight || 0)) {
+              weightsMap[canonKey].maxWeight = s.weight;
+            }
+          });
+        }
+      });
+    }
+  });
   _exerciseHistory = [...Object.values(weightsMap), ...Object.values(bwMap), ...Object.values(cardioMap)];
 }
 
@@ -3044,7 +3061,9 @@ function wkToggleList(btn, type) {
             hint.style.cssText = 'font-size:12px;color:var(--muted);margin:4px 0 8px;';
             container.querySelector('.wk-sets').before(hint);
           }
-          hint.textContent = `Last time: ${ex.weight} lb × ${ex.reps} reps`;
+          hint.textContent = ex.weight > 0
+            ? `Last: ${ex.weight} lb × ${ex.reps} reps · Try ${ex.weight + 5} lb ↑`
+            : `Last: ${ex.reps} reps`;
         }
       } else if (type === 'bw') {
         container.querySelector('.wk-bw-name').value = ex.name;
@@ -3210,6 +3229,43 @@ function addBodyweightExercise() {
   );
 }
 
+let _restTimerInterval = null;
+
+function showRestTimer(secs = 90) {
+  clearInterval(_restTimerInterval);
+  let el = document.getElementById('rest-timer');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'rest-timer';
+    document.body.appendChild(el);
+  }
+  el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:10000;background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:12px 20px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 24px rgba(0,0,0,0.4);white-space:nowrap;';
+  let remaining = secs;
+  function tick() {
+    if (remaining < 0) {
+      clearInterval(_restTimerInterval);
+      el.remove();
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      return;
+    }
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    const pct = Math.round(((secs - remaining) / secs) * 100);
+    el.innerHTML = `
+      <div>
+        <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Rest</div>
+        <div style="font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;color:${remaining <= 10 ? 'var(--red)' : 'var(--text)'}">${m}:${String(s).padStart(2,'0')}</div>
+        <div style="margin-top:5px;height:3px;border-radius:2px;background:var(--border);overflow:hidden;width:80px">
+          <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:2px;transition:width 0.9s linear"></div>
+        </div>
+      </div>
+      <button onclick="clearInterval(_restTimerInterval);document.getElementById('rest-timer')?.remove()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px;line-height:1">✕</button>`;
+    remaining--;
+  }
+  tick();
+  _restTimerInterval = setInterval(tick, 1000);
+}
+
 async function saveWorkout() {
   const date = document.getElementById('wk-date').value;
   const type = document.getElementById('wk-type').value;
@@ -3252,6 +3308,23 @@ async function saveWorkout() {
     showToast('Saved!', 'success');
     loadWorkout(true);
     if (type === 'weights') {
+      // PR detection
+      const prs = [];
+      (exercises.exercises || []).forEach(ex => {
+        if (!ex.sets.length) return;
+        const newMax = Math.max(...ex.sets.map(s => s.weight || 0));
+        if (newMax <= 0) return;
+        const key = normalizeExName(ex.name);
+        const hist = _exerciseHistory.find(e => {
+          const hk = normalizeExName(e.name);
+          return hk === key || levenshtein(hk, key) <= 2;
+        });
+        if (!hist || newMax > (hist.maxWeight || 0)) {
+          if (hist) prs.push({ name: ex.name, weight: newMax });
+        }
+      });
+      prs.forEach(pr => showToast(`🏆 New PR: ${pr.name} — ${pr.weight} lb!`, 'success'));
+      showRestTimer(90);
       document.getElementById('wk-exercises').innerHTML = '';
       addWorkoutExercise();
     } else if (type === 'cardio') {
