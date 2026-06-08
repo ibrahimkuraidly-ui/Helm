@@ -3144,6 +3144,28 @@ function addWorkoutExercise() {
     <button class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addWorkoutSet(this)">+ Add Set</button>`;
   container.appendChild(div);
   addWorkoutSet(div.querySelector('.btn-sm'));
+
+  const nameInput = div.querySelector('.wk-name');
+  initExerciseAutocomplete(
+    nameInput,
+    () => _exerciseHistory.filter(e => e.type === 'weights'),
+    (ex) => {
+      if (!ex.builtin && ex.weight != null) {
+        const w = div.querySelector('.wk-weight');
+        const r = div.querySelector('.wk-reps');
+        if (w) w.value = ex.weight || '';
+        if (r) r.value = ex.reps || '';
+        let hint = div.querySelector('.wk-last-hint');
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.className = 'wk-last-hint';
+          hint.style.cssText = 'font-size:12px;color:var(--muted);margin:4px 0 8px;';
+          div.querySelector('.wk-sets').before(hint);
+        }
+        hint.textContent = `Last time: ${ex.weight} lb × ${ex.reps} reps`;
+      }
+    }
+  );
 }
 
 function addWorkoutSet(btn) {
@@ -3171,6 +3193,20 @@ function addBodyweightExercise() {
     </div>
     <div class="wk-picklist" style="display:none"></div>`;
   container.appendChild(div);
+
+  const nameInput = div.querySelector('.wk-bw-name');
+  initExerciseAutocomplete(
+    nameInput,
+    () => _exerciseHistory.filter(e => e.type === 'bw'),
+    (ex) => {
+      if (!ex.builtin && ex.amount != null) {
+        const a = div.querySelector('.wk-bw-amount');
+        const u = div.querySelector('.wk-bw-unit');
+        if (a) a.value = ex.amount || '';
+        if (u && ex.unit) u.value = ex.unit;
+      }
+    }
+  );
 }
 
 async function saveWorkout() {
