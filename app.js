@@ -544,8 +544,8 @@ function generateInsights() {
 
     // 50/30/20 breakdown
     // Needs: fixed necessities | Wants: flexible spending | Savings: savings budget
-    const needsCats = ['Rent', 'Phone Bill', 'Electric Bill', 'Auto Insurance', 'Groceries'];
-    const wantsCats = ['Sara Allowance', 'Baba Allowance', 'Subscriptions'];
+    const needsCats = ['Rent', 'Phone Bill', 'Electric Bill', 'Auto Insurance', 'Groceries', 'Baba Allowance'];
+    const wantsCats = ['Sara Allowance', 'Subscriptions'];
     const needsBudget = needsCats.reduce((s, c) => s + (d.budgetMap[c] || 0), 0);
     const wantsBudget = wantsCats.reduce((s, c) => s + (d.budgetMap[c] || 0), 0) + (d.nsBudget > 0 ? d.nsBudget : 0);
     const needsPct   = Math.round((needsBudget / income) * 100);
