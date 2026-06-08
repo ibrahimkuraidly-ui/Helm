@@ -2415,8 +2415,8 @@ const WK_CARDIO_ACTIVITIES = ['Running','Walking','Jump Rope','Cycling','Rowing'
 const WK_BW_ACTIVITIES = ['Push-up','Pull-up','Chin-up','Dip','Diamond Push-up','Pike Push-up','Plank','Side Plank','Sit-up','Crunch','Leg Raise','Hanging Leg Raise','Russian Twist','Burpee','Mountain Climber','Hollow Hold','Superman','Pistol Squat','Nordic Curl','Bear Crawl'];
 const WK_EXERCISES_BY_GROUP = {
   Chest:     ['Bench Press','Incline Bench Press','Decline Bench Press','Dumbbell Fly','Cable Fly','Pec Deck','Dumbbell Press','Incline Dumbbell Press','Chest Dip'],
-  Back:      ['Deadlift','Pull-up','Chin-up','Lat Pulldown','Seated Cable Row','Bent Over Row','T-Bar Row','Single Arm Row','Face Pull','RDL','Rack Pull'],
-  Shoulders: ['Overhead Press','Dumbbell Shoulder Press','Arnold Press','Lateral Raise','Front Raise','Rear Delt Fly','Cable Lateral Raise','Shrug','Upright Row'],
+  Back:      ['Deadlift','Pull-up','Chin-up','Lat Pulldown','Seated Cable Row','Bent Over Row','T-Bar Row','Single Arm Row','Rack Pull'],
+  Shoulders: ['Overhead Press','Dumbbell Shoulder Press','Arnold Press','Lateral Raise','Front Raise','Rear Delt Fly','Cable Lateral Raise','Face Pull','Shrug','Upright Row'],
   Biceps:    ['Barbell Curl','Dumbbell Curl','Hammer Curl','Preacher Curl','Concentration Curl','Cable Curl','Incline Dumbbell Curl','EZ Bar Curl'],
   Triceps:   ['Tricep Pushdown','Skull Crusher','Overhead Tricep Extension','Close Grip Bench Press','Tricep Dip','Cable Overhead Extension','Kickback'],
   Legs:      ['Squat','Front Squat','Leg Press','Romanian Deadlift','Leg Curl','Leg Extension','Lunge','Bulgarian Split Squat','Hip Thrust','Calf Raise','Sumo Deadlift','Glute Kickback','Step Up'],
@@ -2427,12 +2427,13 @@ let _workoutAnalysis = false;
 function detectMuscleGroup(name) {
   const n = name.toLowerCase();
   if (['bench', 'chest fly', 'chest flye', 'incline press', 'decline press', 'pec', 'cable fly', 'cable flye'].some(k => n.includes(k))) return 'Chest';
-  if (['skull', 'tricep', 'pushdown', 'push down', 'close grip', 'overhead extension', 'cable extension'].some(k => n.includes(k))) return 'Triceps';
+  if (['skull', 'tricep', 'pushdown', 'push down', 'close grip', 'overhead extension', 'cable extension', 'kickback'].some(k => n.includes(k))) return 'Triceps';
   if (['curl', 'bicep', 'hammer', 'preacher', 'concentration'].some(k => n.includes(k))) return 'Biceps';
-  if (['lateral raise', 'shoulder press', 'military press', 'overhead press', 'ohp', 'front raise', 'shrug', 'face pull', 'arnold'].some(k => n.includes(k))) return 'Shoulders';
+  if (['lateral raise', 'shoulder press', 'military press', 'overhead press', 'ohp', 'front raise', 'shrug', 'face pull', 'arnold', 'upright row'].some(k => n.includes(k))) return 'Shoulders';
   if (['pulldown', 'pull-up', 'pullup', 'pull up', 'chin-up', 'chinup', 'chin up', 'row', 'deadlift', 'rdl', 'rear delt', 'dead hang', 'deadhang'].some(k => n.includes(k))) return 'Back';
-  if (['squat', 'lunge', 'leg press', 'leg curl', 'leg extension', 'calf', 'hip thrust', 'glute', 'step up', 'bulgarian', 'split squat'].some(k => n.includes(k))) return 'Legs';
+  if (['squat', 'lunge', 'leg press', 'leg curl', 'leg extension', 'calf', 'hip thrust', 'glute', 'step up', 'bulgarian', 'split squat', 'sumo'].some(k => n.includes(k))) return 'Legs';
   if (['plank', 'crunch', 'sit-up', 'situp', 'ab ', 'abs', 'core', 'russian twist', 'leg raise', 'hanging', 'l-sit', 'lsit'].some(k => n.includes(k))) return 'Core';
+  if (n.includes('chest dip')) return 'Chest';
   if (n.includes('dip')) return 'Triceps';
   if (n.includes('fly') || n.includes('flye')) return 'Chest';
   if (n.includes('press')) return 'Chest';
