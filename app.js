@@ -1462,6 +1462,7 @@ async function loadSavings(silent = false) {
             </div>
             <div style="display:flex;gap:6px">
               <button class="btn btn-sm btn-primary" onclick="openDeposit('${g.id}',${parseFloat(g.current_amount || 0)})">+ Add</button>
+              <button class="btn btn-sm btn-secondary" onclick="openWithdraw('${g.id}',${parseFloat(g.current_amount || 0)})">− Withdraw</button>
               <button class="btn btn-sm btn-danger" onclick="deleteGoal('${g.id}')">✕</button>
             </div>
           </div>
@@ -1534,6 +1535,31 @@ async function submitDeposit(id, current) {
   try {
     await api('PATCH', 'savings_goals', `id=eq.${id}`, { current_amount: current + deposit });
     closeModal(); showToast('Deposit added', 'success'); loadSavings(true);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function openWithdraw(id, current) {
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-title">Withdraw from Savings</div>
+        <div class="field"><label>Current Balance: ${fmt(current)}</label></div>
+        <div class="field"><label>Withdraw Amount</label><input type="number" id="wdr-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitWithdraw('${id}',${current})">Withdraw</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function submitWithdraw(id, current) {
+  const amount = parseFloat(document.getElementById('wdr-amount').value);
+  if (!amount) { showToast('Enter an amount', 'error'); return; }
+  if (amount > current) { showToast('Amount exceeds current balance', 'error'); return; }
+  try {
+    await api('PATCH', 'savings_goals', `id=eq.${id}`, { current_amount: current - amount });
+    closeModal(); showToast('Withdrawal saved', 'success'); loadSavings(true);
   } catch (e) { showToast(e.message, 'error'); }
 }
 
