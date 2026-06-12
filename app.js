@@ -405,6 +405,7 @@ const CAT_KEYWORDS = {
   'Baba Allowance': ['baba'],
   'Savings':        ['savings', 'saving'],
   'Auto Insurance': ['car insurance', 'auto insurance', 'geico', 'progressive', 'state farm', 'allstate', 'nationwide', 'usaa'],
+  'Car Payment':    ['car payment', 'auto payment', 'auto loan', 'car loan', 'vehicle payment'],
   'Subscriptions':  ['netflix', 'spotify', 'hulu', 'disney', 'amazon prime', 'apple tv', 'youtube', 'gym', 'membership', 'subscription', 'hbo', 'paramount', 'peacock', 'crunchyroll', 'twitch', 'patreon', 'dropbox', 'adobe', 'microsoft 365', 'office 365'],
 };
 
@@ -544,7 +545,7 @@ function generateInsights() {
 
     // 50/30/20 breakdown
     // Needs: fixed necessities | Wants: flexible spending | Savings: savings budget
-    const needsCats = ['Rent', 'Phone Bill', 'Electric Bill', 'Auto Insurance', 'Groceries', 'Baba Allowance'];
+    const needsCats = ['Rent', 'Phone Bill', 'Electric Bill', 'Auto Insurance', 'Groceries', 'Baba Allowance', 'Car Payment'];
     const wantsCats = ['Sara Allowance', 'Subscriptions'];
     const needsBudget = needsCats.reduce((s, c) => s + (d.budgetMap[c] || 0), 0);
     const wantsBudget = wantsCats.reduce((s, c) => s + (d.budgetMap[c] || 0), 0) + (d.nsBudget > 0 ? d.nsBudget : 0);
@@ -1236,7 +1237,7 @@ async function submitCardPayment(card) {
 
 // ─── Budget ──────────────────────────────────────────────────────────────────
 
-const BUDGET_ITEMS = ['Rent','Groceries','Phone Bill','Electric Bill','Sara Allowance','Savings','Baba Allowance','Auto Insurance','Subscriptions'];
+const BUDGET_ITEMS = ['Rent','Groceries','Phone Bill','Electric Bill','Sara Allowance','Savings','Baba Allowance','Auto Insurance','Subscriptions','Car Payment'];
 
 
 async function loadBudget(silent = false) {
