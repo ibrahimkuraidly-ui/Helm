@@ -2768,6 +2768,7 @@ async function loadWorkout(silent = false) {
       });
     });
     const volLabel = totalVolume >= 1000 ? (totalVolume / 1000).toFixed(1) + 'k' : totalVolume || '—';
+    const weekCals = workouts.reduce((s, w) => s + wkEstimateCalories(w.exercises || {}), 0);
 
     // Overall assessment: compare recent 2 weeks vs prior 2 weeks
     const cutoff2w = new Date(); cutoff2w.setDate(cutoff2w.getDate() - 14);
@@ -2941,7 +2942,7 @@ async function loadWorkout(silent = false) {
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${dayCircles}</div>
         <div style="margin-top:12px;text-align:center">${legend}</div>
       </div>
-      <div class="stat-row">
+      <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
         <div class="stat-card">
           <div class="stat-label">Streak</div>
           <div class="stat-value" style="color:var(--orange)">${streak > 0 ? '🔥 ' + streak : '—'}</div>
@@ -2956,6 +2957,11 @@ async function loadWorkout(silent = false) {
           <div class="stat-label">Volume</div>
           <div class="stat-value">${volLabel}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:2px">${totalVolume > 0 ? 'lbs' : 'this week'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Calories</div>
+          <div class="stat-value" style="color:var(--orange)">${weekCals || '—'}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${weekCals > 0 ? 'cal burned' : 'this week'}</div>
         </div>
       </div>
       ${weightCard}
