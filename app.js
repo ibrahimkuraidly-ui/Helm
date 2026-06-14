@@ -2449,6 +2449,111 @@ const WK_EXERCISES_BY_GROUP = {
   Legs:      ['Squat','Front Squat','Leg Press','Romanian Deadlift','Leg Curl','Leg Extension','Lunge','Bulgarian Split Squat','Hip Thrust','Calf Raise','Sumo Deadlift','Glute Kickback','Step Up'],
   Core:      ['Plank','Crunch','Sit-up','Leg Raise','Hanging Leg Raise','Russian Twist','Ab Wheel','Cable Crunch','Decline Sit-up','Hollow Hold'],
 };
+const WK_CARDIO_METS = {
+  'running': 9.8, 'walking': 3.5, 'jump rope': 12.3, 'cycling': 7.5,
+  'rowing': 7, 'stair climber': 9, 'elliptical': 5.5, 'swimming': 7,
+  'hiit': 10, 'battle ropes': 10, 'box jumps': 10
+};
+const WK_COMPOUND_KW = ['squat','deadlift','bench','row','pull-up','pullup','pull up','overhead press','ohp','hip thrust','lunge','leg press','clean','snatch','rdl'];
+
+function wkGetWeightLbs() {
+  const logs = JSON.parse(localStorage.getItem('helm-weight-log') || '[]');
+  return logs.length ? logs[logs.length - 1].weight : 170;
+}
+
+function wkGetWeightKg() { return wkGetWeightLbs() * 0.453592; }
+
+function wkEstimateCalories(exData) {
+  const wKg = wkGetWeightKg();
+  const type = exData.type;
+  if (type === 'cardio') {
+    const act = (exData.activity || '').toLowerCase();
+    let met = 6;
+    for (const [k, v] of Object.entries(WK_CARDIO_METS)) {
+      if (act.includes(k)) { met = v; break; }
+    }
+    const hrs = exData.unit === 'min' ? (exData.duration / 60) : (exData.duration / 120);
+    return Math.round(met * wKg * hrs);
+  }
+  if (type === 'weights') {
+    let total = 0;
+    (exData.exercises || []).forEach(ex => {
+      const compound = WK_COMPOUND_KW.some(k => ex.name.toLowerCase().includes(k));
+      total += (ex.sets || []).length * (compound ? 9 : 5);
+    });
+    return total;
+  }
+  if (type === 'pushups') {
+    let total = 0;
+    (exData.exercises || []).forEach(ex => {
+      if (ex.unit === 'reps') total += Math.round((ex.amount || 0) * 0.35);
+      else if (ex.unit === 'sec') total += Math.round((ex.amount / 60) * 4 * (wKg / 70));
+      else if (ex.unit === 'min') total += Math.round(ex.amount * 4 * (wKg / 70));
+    });
+    return total;
+  }
+  return 0;
+}
+
+function buildWeightCard() {
+  const logs = JSON.parse(localStorage.getItem('helm-weight-log') || '[]');
+  const currentLbs = wkGetWeightLbs();
+  const firstLbs = logs.length > 1 ? logs[0].weight : currentLbs;
+  const change = +(currentLbs - firstLbs).toFixed(1);
+  const changeStr = change === 0 ? '' : (change > 0 ? '+' : '') + change + ' lbs';
+  const changeColor = change < 0 ? 'var(--green)' : change > 0 ? 'var(--red)' : 'var(--muted)';
+  const histRows = logs.slice(-5).reverse().map(l =>
+    `<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--muted)">${fmtDate(l.date)}</span>
+      <span style="font-weight:600">${l.weight} lbs</span>
+    </div>`
+  ).join('');
+  return `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${histRows ? 12 : 0}px">
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px">Body Weight</div>
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-size:24px;font-weight:800">${currentLbs}</span>
+          <span style="font-size:13px;color:var(--muted)">lbs</span>
+          ${changeStr ? `<span style="font-size:12px;color:${changeColor};font-weight:600">${changeStr}</span>` : ''}
+        </div>
+      </div>
+      <button class="btn btn-sm btn-secondary" onclick="openLogWeightModal()">Log Weight</button>
+    </div>
+    ${histRows}
+  </div>`;
+}
+
+function openLogWeightModal() {
+  const today = new Date().toLocaleDateString('en-CA');
+  const cur = wkGetWeightLbs();
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-title">Log Weight</div>
+        <div class="field"><label>Weight (lbs)</label><input type="number" id="wl-weight" value="${cur}" step="0.1" min="50" max="500" inputmode="decimal"></div>
+        <div class="field"><label>Date</label><input type="date" id="wl-date" value="${today}"></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveWeightLog()">Save</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function saveWeightLog() {
+  const weight = parseFloat(document.getElementById('wl-weight').value);
+  const date = document.getElementById('wl-date').value;
+  if (!weight || !date) { showToast('Enter weight and date', 'error'); return; }
+  const logs = JSON.parse(localStorage.getItem('helm-weight-log') || '[]');
+  const idx = logs.findIndex(l => l.date === date);
+  if (idx >= 0) { logs[idx].weight = weight; } else { logs.push({ date, weight }); logs.sort((a, b) => a.date.localeCompare(b.date)); }
+  localStorage.setItem('helm-weight-log', JSON.stringify(logs));
+  closeModal();
+  showToast('Weight logged', 'success');
+  loadWorkout(true);
+}
+
 let _workoutAnalysis = false;
 
 function detectMuscleGroup(name) {
@@ -2541,11 +2646,13 @@ async function loadWorkout(silent = false) {
         if (!groups[type]) groups[type] = [];
         groups[type].push(w);
       });
+      const totalCals = workouts.reduce((s, w) => s + wkEstimateCalories(w.exercises || {}), 0);
       let cards = '';
       TYPE_ORDER.forEach(type => {
         if (!groups[type]) return;
         const color = WK_COLORS[type]; const label = WK_LABELS[type];
         const wList = groups[type];
+        const cardCals = wList.reduce((s, w) => s + wkEstimateCalories(w.exercises || {}), 0);
         let inner = '';
         if (type === 'weights') {
           const allExs = wList.flatMap(w => (w.exercises||{}).exercises || (Array.isArray(w.exercises) ? w.exercises : []));
@@ -2583,12 +2690,15 @@ async function loadWorkout(silent = false) {
             inner += `${exBody}<div style="display:flex;justify-content:flex-end;margin-top:4px"><button onclick="deleteWorkout('${w.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;display:flex;line-height:1">${TRASH_ICO}</button></div>`;
           });
         }
-        cards += `<div class="card" style="margin-bottom:10px"><div style="margin-bottom:${inner?12:0}px"><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${color};background:${color}22;padding:3px 10px;border-radius:10px">${label}</span></div>${inner}</div>`;
+        cards += `<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${inner?12:0}px"><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:${color};background:${color}22;padding:3px 10px;border-radius:10px">${label}</span>${cardCals > 0 ? `<span style="font-size:11px;color:var(--orange);font-weight:600">🔥 ~${cardCals} cal</span>` : ''}</div>${inner}</div>`;
       });
       el.innerHTML = `<div style="padding-bottom:80px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:0 4px">
-          <button onclick="_workoutDay=null;loadWorkout()" style="background:none;border:none;color:var(--accent);font-size:26px;cursor:pointer;padding:0;line-height:1">‹</button>
-          <div style="font-size:17px;font-weight:700">${dayLabel}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onclick="_workoutDay=null;loadWorkout()" style="background:none;border:none;color:var(--accent);font-size:26px;cursor:pointer;padding:0;line-height:1">‹</button>
+            <div style="font-size:17px;font-weight:700">${dayLabel}</div>
+          </div>
+          ${totalCals > 0 ? `<div style="font-size:13px;color:var(--orange);font-weight:700">🔥 ~${totalCals} cal</div>` : ''}
         </div>
         ${cards||`<div class="empty-state" style="padding:32px 20px"><div class="empty-state-icon">💪</div><div class="empty-state-text">No workouts logged.<br>Tap + to add one.</div></div>`}
       </div>`;
@@ -2816,6 +2926,8 @@ async function loadWorkout(silent = false) {
       }
     }
 
+    const weightCard = buildWeightCard();
+
     el.innerHTML = `<div style="padding-bottom:80px">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -2846,6 +2958,7 @@ async function loadWorkout(silent = false) {
           <div style="font-size:10px;color:var(--muted);margin-top:2px">${totalVolume > 0 ? 'lbs' : 'this week'}</div>
         </div>
       </div>
+      ${weightCard}
       ${weekCoverageCard}
       ${suggestionCard}
       <div class="card" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px">
