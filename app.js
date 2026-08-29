@@ -20,6 +20,7 @@ let _incomeTxnCache = [];
 let _cardBalanceCache = null;
 let _catCorrectionsLoaded = false;
 let _txnSpendingChart = null;
+const _tabLastLoad = {};
 
 const ACCOUNT_TYPES = ['401k','Roth IRA','Traditional IRA','Brokerage','HSA','Crypto','Savings Bond','Other'];
 
@@ -619,6 +620,7 @@ function activateTab(tab) {
   if (btn) btn.classList.add('active');
   const page = document.getElementById('page-' + tab);
   if (page) page.classList.add('active');
+  if (tab !== 'markets' && Date.now() - (_tabLastLoad[tab] || 0) < 45000) return;
   loadPage(tab);
 }
 
@@ -853,6 +855,7 @@ async function loadDashboard(silent = false) {
       </div>`;
 
     el.innerHTML = html;
+    _tabLastLoad['dashboard'] = Date.now();
   } catch (e) {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading dashboard</div></div>`;
     showToast(e.message, 'error');
@@ -1002,6 +1005,7 @@ async function loadTransactions(silent = false) {
       <div id="txn-list"></div>`;
 
     el.innerHTML = html;
+    _tabLastLoad['transactions'] = Date.now();
 
     document.getElementById('txn-search').addEventListener('input', function() {
       document.getElementById('txn-search-clear').style.display = this.value ? 'flex' : 'none';
@@ -1341,6 +1345,7 @@ async function loadBudget(silent = false) {
 
 
     el.innerHTML = html;
+    _tabLastLoad['budget'] = Date.now();
   } catch (e) {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading</div></div>`;
     showToast(e.message, 'error');
@@ -1480,6 +1485,7 @@ async function loadSavings(silent = false) {
     }
 
     el.innerHTML = html;
+    _tabLastLoad['savings'] = Date.now();
   } catch (e) {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading</div></div>`;
     showToast(e.message, 'error');
@@ -1761,6 +1767,7 @@ async function loadPortfolio(silent = false) {
     }
 
     el.innerHTML = html;
+    _tabLastLoad['portfolio'] = Date.now();
 
     fetchGoldPrice();
 
@@ -2981,6 +2988,7 @@ async function loadWorkout(silent = false) {
     if (!fab) { fab = document.createElement('button'); fab.id = 'workout-fab'; fab.className = 'fab'; fab.innerHTML = '+'; document.body.appendChild(fab); }
     fab.onclick = () => openWorkoutDayAndLog(today);
     fab.style.display = '';
+    _tabLastLoad['workout'] = Date.now();
   } catch(e) {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading</div></div>`;
     showToast(e.message, 'error');
@@ -3702,6 +3710,7 @@ async function loadWater(silent = false) {
           </div>
         </div>
       </div>`;
+    _tabLastLoad['water'] = Date.now();
   } catch(e) {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading</div></div>`;
     showToast(e.message, 'error');
@@ -3860,6 +3869,7 @@ async function loadGrocery(silent = false) {
     }
     html += '</div>';
     el.innerHTML = html;
+    _tabLastLoad['grocery'] = Date.now();
     let gFab = document.getElementById('grocery-fab');
     if (view === 'items') {
       if (!gFab) {
