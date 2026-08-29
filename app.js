@@ -1,6 +1,6 @@
 // Helm — Personal Finance PWA
 const SUPABASE_URL = 'https://ulrdmnzeoswlzuyxxzbx.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_yWV0O6uMKoc7E3BHmKPmiw_dIqDsN21';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVscmRtbnplb3N3bHp1eXh4emJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NDAxMzUsImV4cCI6MjA4NzUxNjEzNX0.yY_tFKzYyoW49PQ0ETjFD-Nr9wjoLYjBUvTti-15LWU';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: 'helm-auth' }
