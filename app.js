@@ -172,6 +172,7 @@ function showApp() {
   activateTab(savedTab);
   setTimeout(checkWaterReminder, 1200);
   setTimeout(checkMonthRollover, 2500);
+  setTimeout(syncWeightLog, 3000);
 }
 
 async function checkWaterReminder() {
@@ -287,7 +288,19 @@ document.addEventListener('keydown', e => {
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 
+const _inflightPosts = new Map();
 async function api(method, table, query = '', body = null) {
+  if (method === 'POST' && body) {
+    const k = table + '|' + query + '|' + JSON.stringify(body);
+    if (_inflightPosts.has(k)) return _inflightPosts.get(k);
+    const p = _apiRequest(method, table, query, body).finally(() => _inflightPosts.delete(k));
+    _inflightPosts.set(k, p);
+    return p;
+  }
+  return _apiRequest(method, table, query, body);
+}
+
+async function _apiRequest(method, table, query = '', body = null) {
   if (!authToken) {
     const { data: { session } } = await sb.auth.getSession();
     if (session) { authToken = session.access_token; currentUserId = session.user.id; }
@@ -314,6 +327,10 @@ async function api(method, table, query = '', body = null) {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// Today's date in the device's local time zone (YYYY-MM-DD). toISOString() is UTC and
+// rolls over to tomorrow after 8pm Eastern, so don't use it for "today".
+function localToday() { return new Date().toLocaleDateString('en-CA'); }
 
 function fmt(n)      { return '$' + Math.abs(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmtS(n)     { return '$' + Math.abs(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 }); }
@@ -1049,7 +1066,7 @@ async function loadTransactions(silent = false) {
 function openAddTxn() {
   _autoSuggestedCat = null;
   loadCatCorrections();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const cats  = ['Normal Spending', ...BUDGET_ITEMS, 'Other'];
   document.getElementById('modal-root').innerHTML = `
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
@@ -1098,7 +1115,7 @@ async function submitTxn() {
 function openReAddTxn(amount, desc, category, pm) {
   _autoSuggestedCat = null;
   loadCatCorrections();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const cats = ['Normal Spending', ...BUDGET_ITEMS, 'Other'];
   document.getElementById('modal-root').innerHTML = `
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
@@ -1157,7 +1174,7 @@ async function submitEditTxn(id) {
 }
 
 function openAddIncome() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   document.getElementById('modal-root').innerHTML = `
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
       <div class="modal">
@@ -1224,7 +1241,7 @@ function openCardPayment(card, balance) {
 async function resetCardBalance(card, balance) {
   const displayAmt = `$${Math.abs(balance).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   if (!await showConfirm(`Zero out ${card} balance (${displayAmt})?`, 'Reset')) return;
-  const date = new Date().toISOString().slice(0,10);
+  const date = localToday();
   try {
     _cardBalanceCache = null;
     await api('POST','transactions','',{user_id:currentUserId,type:'expense',amount:balance,category:'__card_payment__',date,description:JSON.stringify({d:'Balance Reset',pm:card})});
@@ -1237,7 +1254,7 @@ async function resetCardBalance(card, balance) {
 async function submitCardPayment(card) {
   const amount = parseFloat(document.getElementById('cp-amount').value);
   if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
-  const date = new Date().toISOString().slice(0, 10);
+  const date = localToday();
   try {
     _cardBalanceCache = null;
     await api('POST', 'transactions', '', { user_id: currentUserId, type: 'expense', amount, category: '__card_payment__', date, description: JSON.stringify({ d: 'Card Payment', pm: card }) });
@@ -1594,7 +1611,19 @@ async function checkMonthRollover() {
   const lastMonth = prevMonth(currMonth());
   const key = `helm-rollover-${lastMonth}`;
   if (lastMonth < '2026-03') return; // app started March 2026
-  if (localStorage.getItem(key)) return;
+  let doneMonths = [];
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    doneMonths = user?.user_metadata?.rollovers_done || [];
+  } catch (_) { return; } // can't confirm status — skip, retry next session
+  const markDone = async () => {
+    localStorage.setItem(key, '1');
+    if (!doneMonths.includes(lastMonth)) {
+      await sb.auth.updateUser({ data: { rollovers_done: [...doneMonths, lastMonth].slice(-24) } });
+    }
+  };
+  if (doneMonths.includes(lastMonth)) { localStorage.setItem(key, '1'); return; }
+  if (localStorage.getItem(key)) { await markDone().catch(() => {}); return; }
 
   try {
     const [allIncomeGoals, txns, goals] = await Promise.all([
@@ -1603,7 +1632,7 @@ async function checkMonthRollover() {
       api('GET', 'savings_goals',`user_id=eq.${currentUserId}&select=*&order=created_at`),
     ]);
 
-    if (!goals.length) { localStorage.setItem(key, '1'); return; }
+    if (!goals.length) { await markDone(); return; }
 
     // Match income goal to this cycle's date range (same logic as dashboard)
     const [ly, lm] = lastMonth.split('-').map(Number);
@@ -1616,14 +1645,14 @@ async function checkMonthRollover() {
       return s <= cycleEnd && e >= cycleStart;
     }) || allIncomeGoals[0] || null;
 
-    if (!incomeGoal) { localStorage.setItem(key, '1'); return; }
+    if (!incomeGoal) { await markDone(); return; }
     const incomeGoalAmt = parseFloat(incomeGoal.limit_amount);
 
     // Everything unspent = income goal minus all expenses
     const totalSpent = txns.reduce((s, t) => s + parseFloat(t.amount), 0);
     const surplus    = parseFloat((incomeGoalAmt - totalSpent).toFixed(2));
 
-    localStorage.setItem(key, '1');
+    await markDone();
     if (surplus <= 0) return;
 
     const goal      = goals[0];
@@ -1675,7 +1704,7 @@ async function loadPortfolio(silent = false) {
   try {
     const [accounts, snapshots, allHoldings, savingsGoals] = await Promise.all([
       api('GET', 'investment_accounts',  `user_id=eq.${currentUserId}&select=*&order=created_at`),
-      api('GET', 'investment_snapshots', `user_id=eq.${currentUserId}&select=*&order=date.asc`),
+      api('GET', 'investment_snapshots', `user_id=eq.${currentUserId}&select=*&order=date.asc,created_at.asc`),
       api('GET', 'crypto_holdings',      `user_id=eq.${currentUserId}&select=*`).catch(() => []),
       api('GET', 'savings_goals',        `user_id=eq.${currentUserId}&select=current_amount`).catch(() => []),
     ]);
@@ -1860,7 +1889,7 @@ async function submitAccount() {
     if (balance > 0) {
       await api('POST', 'investment_snapshots', '', {
         account_id: acct.id, user_id: currentUserId,
-        date: new Date().toISOString().slice(0, 10), balance, contributions: balance
+        date: localToday(), balance, contributions: balance
       });
     }
     closeModal(); showToast('Account added', 'success'); loadPortfolio(true);
@@ -1868,7 +1897,7 @@ async function submitAccount() {
 }
 
 function openLogBalance(accountId, accountName) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   document.getElementById('modal-root').innerHTML = `
     <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
       <div class="modal">
@@ -1906,7 +1935,7 @@ async function deleteAccount(id) {
 // ─── Crypto Holdings ──────────────────────────────────────────────────────────
 
 async function autoUpdateCryptoSnapshots(accounts, existingSnaps, holdingsByAcct) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const needsUpdate = accounts.filter(a =>
     a.account_type === 'Crypto' &&
     (holdingsByAcct[a.id] || []).length > 0 &&
@@ -1930,6 +1959,8 @@ async function autoUpdateCryptoSnapshots(accounts, existingSnaps, holdingsByAcct
 
     const created = [];
     await Promise.all(needsUpdate.map(async a => {
+      const missingPrice = (holdingsByAcct[a.id] || []).some(h => parseFloat(h.amount) > 0 && !priceMap[h.coin_symbol.toUpperCase()]);
+      if (missingPrice) return; // skip today rather than save an understated value
       const total = (holdingsByAcct[a.id] || []).reduce((sum, h) =>
         sum + parseFloat(h.amount) * (priceMap[h.coin_symbol.toUpperCase()] || 0), 0);
       if (total <= 0) return;
@@ -2006,7 +2037,7 @@ async function saveHoldings(accountId) {
     await api('DELETE', 'crypto_holdings', `account_id=eq.${accountId}&user_id=eq.${currentUserId}`);
     await api('POST',   'crypto_holdings', '', holdings);
     // Delete today's snapshot so it recalculates with new holdings on next load
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localToday();
     await api('DELETE', 'investment_snapshots', `account_id=eq.${accountId}&user_id=eq.${currentUserId}&date=eq.${today}`).catch(() => {});
     closeModal();
     showToast('Holdings saved', 'success');
@@ -2289,7 +2320,7 @@ async function loadPicks() {
     return;
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const cache = JSON.parse(localStorage.getItem(GROQ_PICKS_KEY) || 'null');
   if (cache && cache.date === today && cache.text) {
     renderPicks(el, cache.text, cache.time, true);
@@ -2473,6 +2504,23 @@ const WK_CARDIO_METS = {
 };
 const WK_COMPOUND_KW = ['squat','deadlift','bench','row','pull-up','pullup','pull up','overhead press','ohp','hip thrust','lunge','leg press','clean','snatch','rdl'];
 
+// Merge this device's weight log with the one saved on the account, keep both in sync
+async function syncWeightLog() {
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    const cloud = user?.user_metadata?.weight_log || [];
+    const local = JSON.parse(localStorage.getItem('helm-weight-log') || '[]');
+    const byDate = {};
+    cloud.forEach(l => { byDate[l.date] = l; });
+    local.forEach(l => { byDate[l.date] = l; }); // this device wins on the same date
+    const merged = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+    localStorage.setItem('helm-weight-log', JSON.stringify(merged));
+    if (JSON.stringify(merged) !== JSON.stringify(cloud)) {
+      await sb.auth.updateUser({ data: { weight_log: merged } });
+    }
+  } catch (_) {}
+}
+
 function wkGetWeightLbs() {
   const logs = JSON.parse(localStorage.getItem('helm-weight-log') || '[]');
   return logs.length ? logs[logs.length - 1].weight : 170;
@@ -2566,6 +2614,7 @@ function saveWeightLog() {
   const idx = logs.findIndex(l => l.date === date);
   if (idx >= 0) { logs[idx].weight = weight; } else { logs.push({ date, weight }); logs.sort((a, b) => a.date.localeCompare(b.date)); }
   localStorage.setItem('helm-weight-log', JSON.stringify(logs));
+  sb.auth.updateUser({ data: { weight_log: logs } }).catch(() => {});
   closeModal();
   showToast('Weight logged', 'success');
   loadWorkout(true);
@@ -3430,7 +3479,9 @@ function showRestTimer(secs = 90) {
   _restTimerInterval = setInterval(tick, 1000);
 }
 
+let _savingWorkout = false;
 async function saveWorkout() {
+  if (_savingWorkout) return;
   const date = document.getElementById('wk-date').value;
   const type = document.getElementById('wk-type').value;
   let exercises;
@@ -3467,6 +3518,8 @@ async function saveWorkout() {
     if (!bwExs.length) { showToast('Add at least one exercise', 'error'); return; }
     exercises = { type: 'pushups', exercises: bwExs };
   }
+  _savingWorkout = true;
+  setTimeout(() => { _savingWorkout = false; }, 1500);
   try {
     await api('POST', 'workouts', '', { user_id: currentUserId, date, exercises });
     showToast('Saved!', 'success');
@@ -3752,11 +3805,17 @@ async function updateWater(delta) {
   _applyWaterUnits(newUnits);
   try {
     const today = new Date().toLocaleDateString('en-CA');
+    if (!_waterCache.id && _waterCache.creating) await _waterCache.creating.catch(() => {});
     if (_waterCache.id) {
-      await api('PATCH', 'water_logs', `id=eq.${_waterCache.id}`, { glasses: newUnits });
+      await api('PATCH', 'water_logs', `id=eq.${_waterCache.id}`, { glasses: _waterCache.units });
     } else {
-      const created = await api('POST', 'water_logs', '', { user_id: currentUserId, date: today, glasses: newUnits });
+      _waterCache.creating = api('POST', 'water_logs', '', { user_id: currentUserId, date: today, glasses: newUnits });
+      const created = await _waterCache.creating;
+      _waterCache.creating = null;
       if (created && created[0]) _waterCache.id = created[0].id;
+      if (_waterCache.id && _waterCache.units !== newUnits) {
+        await api('PATCH', 'water_logs', `id=eq.${_waterCache.id}`, { glasses: _waterCache.units });
+      }
     }
   } catch(e) {
     _waterCache.units = prevUnits;
