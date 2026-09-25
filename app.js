@@ -944,7 +944,8 @@ async function loadTransactions(silent = false) {
       return s <= tCycleEnd && e >= tCycleStart;
     }) || null;
     const incomeGoalAmt = activeGoal ? parseFloat(activeGoal.limit_amount) : null;
-    const remaining     = incomeGoalAmt != null ? incomeGoalAmt - totalSpent : null;
+    // Remaining = monthly income + any extra income logged via +Log - spent
+    const remaining     = incomeGoalAmt != null ? incomeGoalAmt + totalIncome - totalSpent : null;
 
     // Build category list
     const usedCats = [...new Set(txns.map(t => t.category))].sort();
