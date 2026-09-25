@@ -656,14 +656,15 @@ async function loadDashboard(silent = false) {
       api('GET', 'savings_goals', `user_id=eq.${currentUserId}&select=*`),
       api('GET', 'investment_snapshots', `user_id=eq.${currentUserId}&select=*&order=date.desc`),
       api('GET', 'budgets', `user_id=eq.${currentUserId}&category=eq.__income_goal__&select=*&order=created_at.desc`),
+      api('GET', 'transactions', `user_id=eq.${currentUserId}&${mr}&type=eq.income&select=amount`),
     ];
     if (!_cardBalanceCache) {
       basePromises.push(api('GET', 'transactions', `user_id=eq.${currentUserId}&type=eq.expense&select=amount,description,category`));
     }
     const results = await Promise.all(basePromises);
-    const [txns, budgets, goals, snapshots, allIncomeGoals] = results;
-    const allCardTxns = _cardBalanceCache || results[5] || [];
-    if (!_cardBalanceCache && results[5]) _cardBalanceCache = results[5];
+    const [txns, budgets, goals, snapshots, allIncomeGoals, incomeTxns] = results;
+    const allCardTxns = _cardBalanceCache || results[6] || [];
+    if (!_cardBalanceCache && results[6]) _cardBalanceCache = results[6];
 
     // Compute cycle range for the active month (25th of prev → 24th of this)
     const [ay, am] = _activeMonth.split('-').map(Number);
@@ -680,7 +681,10 @@ async function loadDashboard(silent = false) {
     }) || null;
 
     const expenses       = txns.reduce((s, t) => s + parseFloat(t.amount), 0);
-    const incomeGoalAmt  = activeGoal ? parseFloat(activeGoal.limit_amount) : null;
+    // Total income = monthly income + any extra income logged via +Log
+    const baseIncome     = activeGoal ? parseFloat(activeGoal.limit_amount) : null;
+    const extraIncome    = incomeTxns.reduce((s, t) => s + parseFloat(t.amount), 0);
+    const incomeGoalAmt  = baseIncome != null ? baseIncome + extraIncome : null;
     const remaining      = incomeGoalAmt != null ? incomeGoalAmt - expenses : null;
 
     // Card balances (all-time)
@@ -768,7 +772,7 @@ async function loadDashboard(silent = false) {
           <div>
             <div class="card-title" style="margin-bottom:2px">Income</div>
             ${activeGoal
-              ? `<div style="font-size:22px;font-weight:800;color:var(--green)">${privVal(fmtS(activeGoal.limit_amount))}</div>`
+              ? `<div style="font-size:22px;font-weight:800;color:var(--green)">${privVal(fmtS(incomeGoalAmt))}</div>${extraIncome > 0 ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${privVal(fmtS(baseIncome))} monthly + ${privVal(fmtS(extraIncome))} extra</div>` : ''}`
               : `<div style="font-size:13px;color:var(--muted)">Not set for this month</div>`}
             <div style="font-size:11px;color:var(--muted);margin-top:2px">${fmtDate(cycleStart)} – ${fmtDate(cycleEnd)}</div>
           </div>
@@ -1179,6 +1183,9 @@ async function submitIncomeTxn() {
     await api('POST', 'transactions', '', { user_id: currentUserId, type: 'income', amount, category: 'Income', date, description });
     closeModal();
     showToast('Income logged', 'success');
+    // Force Dashboard and Budget to refresh so the new income shows everywhere
+    delete _tabLastLoad['dashboard'];
+    delete _tabLastLoad['budget'];
     loadTransactions(true);
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -1250,10 +1257,11 @@ async function loadBudget(silent = false) {
   const el = document.getElementById('budget-content');
   if (!silent) el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
   try {
-    const [budgets, allIncomeGoals, transactions] = await Promise.all([
+    const [budgets, allIncomeGoals, transactions, incomeTxns] = await Promise.all([
       api('GET', 'budgets',      `user_id=eq.${currentUserId}&month=eq.${_activeMonth}&category=neq.__income_goal__&select=*`),
       api('GET', 'budgets',      `user_id=eq.${currentUserId}&category=eq.__income_goal__&select=*&order=created_at.desc`),
       api('GET', 'transactions', `user_id=eq.${currentUserId}&${monthRange(_activeMonth)}&type=eq.expense&category=neq.__card_payment__&select=amount,category`),
+      api('GET', 'transactions', `user_id=eq.${currentUserId}&${monthRange(_activeMonth)}&type=eq.income&select=amount`),
     ]);
 
     // Ensure all 9 items exist for this month — create any missing ones at $0
@@ -1287,7 +1295,8 @@ async function loadBudget(silent = false) {
       const [s, e] = g.month.split('_');
       return s <= bCycleEnd && e >= bCycleStart;
     }) || null;
-    const incomeGoalAmt = activeGoal ? parseFloat(activeGoal.limit_amount) : null;
+    const extraIncome   = incomeTxns.reduce((s, t) => s + parseFloat(t.amount), 0);
+    const incomeGoalAmt = activeGoal ? parseFloat(activeGoal.limit_amount) + extraIncome : null;
     const totalBudgeted = ordered.reduce((s, b) => s + parseFloat(b.limit_amount), 0);
     const normalSpending = incomeGoalAmt != null ? incomeGoalAmt - totalBudgeted : null;
 
