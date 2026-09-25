@@ -1,4 +1,4 @@
-const CACHE = 'helm-v8';
+const CACHE = 'helm-v9';
 // Only pre-cache the static shell — NOT app.js/style.css so updates are instant
 const SHELL = ['./', './index.html', './manifest.json', './icon.svg'];
 

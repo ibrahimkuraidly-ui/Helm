@@ -21,6 +21,7 @@ let _cardBalanceCache = null;
 let _catCorrectionsLoaded = false;
 let _txnSpendingChart = null;
 const _tabLastLoad = {};
+const _tabLoadedMonth = {}; // which month each finance tab last showed
 
 const ACCOUNT_TYPES = ['401k','Roth IRA','Traditional IRA','Brokerage','HSA','Crypto','Savings Bond','Other'];
 
@@ -637,7 +638,8 @@ function activateTab(tab) {
   if (btn) btn.classList.add('active');
   const page = document.getElementById('page-' + tab);
   if (page) page.classList.add('active');
-  if (tab !== 'markets' && Date.now() - (_tabLastLoad[tab] || 0) < 45000) return;
+  const monthChanged = _tabLoadedMonth[tab] && _tabLoadedMonth[tab] !== _activeMonth;
+  if (tab !== 'markets' && !monthChanged && Date.now() - (_tabLastLoad[tab] || 0) < 45000) return;
   loadPage(tab);
 }
 
@@ -877,6 +879,7 @@ async function loadDashboard(silent = false) {
 
     el.innerHTML = html;
     _tabLastLoad['dashboard'] = Date.now();
+    _tabLoadedMonth['dashboard'] = _activeMonth;
   } catch (e) {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading dashboard</div></div>`;
     showToast(e.message, 'error');
@@ -1028,6 +1031,7 @@ async function loadTransactions(silent = false) {
 
     el.innerHTML = html;
     _tabLastLoad['transactions'] = Date.now();
+    _tabLoadedMonth['transactions'] = _activeMonth;
 
     document.getElementById('txn-search').addEventListener('input', function() {
       document.getElementById('txn-search-clear').style.display = this.value ? 'flex' : 'none';
@@ -1284,7 +1288,7 @@ async function loadBudget(silent = false) {
     // Ensure all 9 items exist for this month — create any missing ones at $0
     const existingCats = new Set(budgets.map(b => b.category));
     const missing = BUDGET_ITEMS.filter(cat => !existingCats.has(cat));
-    if (missing.length > 0) {
+    if (missing.length > 0 && _activeMonth >= currMonth()) {
       await Promise.all(missing.map(cat =>
         api('POST', 'budgets', '', { user_id: currentUserId, month: _activeMonth, category: cat, limit_amount: 0 })
       ));
@@ -1373,6 +1377,7 @@ async function loadBudget(silent = false) {
 
     el.innerHTML = html;
     _tabLastLoad['budget'] = Date.now();
+    _tabLoadedMonth['budget'] = _activeMonth;
   } catch (e) {
     el.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error loading</div></div>`;
     showToast(e.message, 'error');
